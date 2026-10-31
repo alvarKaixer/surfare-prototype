@@ -16,7 +16,7 @@ Source: g(OAT)ed.pdf supplied in this conversation. The request excludes Surfy's
 | Objective 11 / feature 6: Surfy Q&A | Excluded at user's request | Mascot art only. |
 | Objective 12: communicate uncertainty | Insufficient evidence for uncertain OCR/QR or unconfirmed URLs; visible online/unavailable/not-checked states; limitations | Results are screenings, never authenticity certification. |
 | Feature 8: performance/usability evaluation | Separate Evaluation view: labeled JSON import, per-language precision/recall/false positives, per-case outcomes, local timing, OCR character error rate, manual function checklist, anonymous usability form, local JSON exports | Example set is synthetic and not independent research validation; human testing and held-out data must actually be collected. |
-| Proposed camera/optics tool | Web Camera + Canvas + OpenCV preflight and live hints for brightness, blur and bright-area glare proxy; contrast preprocessing | Optical quality heuristics may flag white paper or miss localized glare. |
+| Proposed camera/optics tool | High-resolution Web Camera + Canvas; lightweight pixel-based brightness/blur hints; crop/rotate controls; conditional grayscale enhancement | OpenCV was replaced to remove its download from image selection. Quality hints remain approximate and can miss localized glare, moiré or perspective distortion. |
 
 ## Demonstrated checks
 

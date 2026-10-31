@@ -1,0 +1,3 @@
+GCash advisory: Your account will be blocked today.
+Send your OTP now to verify your account.
+Visit https://gcash.com.verify-account.example/login

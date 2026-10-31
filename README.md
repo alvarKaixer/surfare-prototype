@@ -1,6 +1,6 @@
 # Surfare Detector
 
-A standalone, GitHub-ready React + Vite application for checking text messages, links, images and QR codes. Includes the proposal-style UI, local OCR/QR processing, OpenCV camera-quality hints, optional Google Safe Browsing, offline resources, contextual guidance and evaluation tools.
+A standalone, GitHub-ready React + Vite application for checking text messages, links, images and QR codes. Includes the proposal-style UI, local OCR/QR processing, lightweight camera-quality hints, optional Google Safe Browsing, offline resources, contextual guidance and evaluation tools.
 
 This export contains the working detector from the ChatGPT prototype, adapted for ordinary hosting. It does not require ChatGPT sign-in, Sites, a proprietary repository proxy, or an account-specific project ID. Surfy is decorative branding only; the guided assistant is excluded.
 
@@ -56,6 +56,25 @@ npm run preview
 
 `npm run preview` serves the previously built app and local Worker on port 8787. `vite preview` alone is not a complete API preview.
 
+## Getting clearer and faster OCR
+
+- For text on a monitor or phone, upload an original screenshot. A camera photo can introduce reflections, blur, perspective distortion and moiré patterns.
+- For photographs, fill the frame with the message, keep the camera parallel to it, and allow focus to settle. The app requests a high-resolution rear camera with continuous focus when supported, and prefers a still photo over a video frame where the browser supports it.
+- Use **Crop to text** to exclude desktop windows, borders and unrelated text. Rotate sideways photos before scanning; restore the original to retry a crop. The preview is reduced for display; OCR uses the larger image canvas.
+- OCR starts preparing when the Image tab opens and reuses one worker. The first scan needs the engine and a roughly 3 MB English model. Quality checks use local pixels immediately and do not download OpenCV.
+- The first recognition pass preserves the original image and uses automatic layout and slight-skew correction. Weak readings can get one enhanced, sparse-layout retry. Disable the retry checkbox if you prefer a single pass. It cannot recover letters lost to blur or glare.
+- Review the extracted text, especially URLs, numbers and OTP requests. Confidence is approximate, not a guarantee that every character is correct.
+
+The LSTM-only `4.0.0_best_int` model omits the unused legacy data in the previous 11 MB language file. The asset-copy script includes both SIMD and non-SIMD cores, with a build-time check that all four engine files exist. No OCR data is sent to a server.
+
+Optional real-engine smoke check after building:
+
+```bash
+node --test tests/ocr.integration.mjs
+```
+
+This uses the bundled English model on two synthetic screenshot fixtures (light and dark). It does not measure accuracy on camera photos or mobile speed. Use the Evaluation tab and independent photos to measure those.
+
 ## Alternative: Cloudflare Workers
 
 Cloudflare keeps the PDF's Worker backend architecture. No Vercel function is used on this route.
@@ -81,19 +100,20 @@ You can also connect the GitHub repository through **Cloudflare Workers & Pages 
 | `lib/verification.js` | Google Safe Browsing request logic shared by both hosts |
 | `lib/assessment.js` | Combines local evidence with reputation results |
 | `lib/file-validation.js` | Image signatures and file-size validation |
-| `lib/image-tools.ts` | OpenCV preprocessing and camera-quality hints |
+| `lib/image-tools.ts`, `lib/image-pixels.js` | Bounded image sizing, grayscale enhancement and lightweight camera-quality hints |
+| `lib/ocr.js` | Automatic layout recognition and conditional fallback selection |
 | `lib/evaluation.js` | Dataset metrics and OCR character error rate |
 | `api/verify.js` | Vercel serverless backend |
 | `worker/index.js` | Cloudflare backend and static assets handler |
 | `public/brand`, `public/fonts` | Original Surfare artwork and locally hosted fonts |
 | `public/evaluation/` | Synthetic example cases and import format |
-| `scripts/copy-ocr.mjs` | Copies OCR worker, WASM, model and OpenCV from npm |
+| `scripts/copy-ocr.mjs` | Copies OCR worker, SIMD/non-SIMD WASM cores and the LSTM language model from npm |
 | `scripts/offline.mjs` | Builds the Workbox offline service worker |
 | `tests/` | Regression and hosting adapter tests |
 | `.github/workflows/checks.yml` | Tests/builds pushes and pull requests |
 | `REQUIREMENTS.md` | PDF requirements mapping and boundaries |
 
-OCR assets are generated from locked npm dependencies during every build. You do not need to upload 36 MB of generated files to GitHub. Fonts, mascots, QR examples, evaluation data, source, configuration, dependency lockfile and tests are included. Never upload `node_modules`, `dist`, `.dev.vars`, `.env`, `.vercel`, or `.wrangler`.
+OCR assets are generated from locked npm dependencies during every build. You do not need to upload generated OCR files to GitHub. Fonts, mascots, QR examples, evaluation data, source, configuration, dependency lockfile and tests are included. Never upload `node_modules`, `dist`, `.dev.vars`, `.env`, `.vercel`, or `.wrangler`.
 
 ## Verify your deployment
 
@@ -101,7 +121,7 @@ OCR assets are generated from locked npm dependencies during every build. You do
 - Run **Google phishing test** with the checkbox enabled. It should report a Google threat; the app does not need to visit the test URL.
 - Upload a PNG/JPEG/WebP screenshot, review the preview, and press **Check image**. Correct OCR text if needed.
 - Try the built-in QR example. Its destination is displayed without being opened.
-- Select **Prepare for offline use**, wait for completion, then check offline on your target browser. Initial download is approximately 36 MB. Browser eviction/private browsing may affect offline reopening.
+- Select **Prepare for offline use**, wait for completion, then check offline on your target browser. The complete package is approximately 17 MB. OCR assets can also be downloaded earlier when you open the Image tab. Browser eviction/private browsing may affect offline reopening.
 - Run **Evaluation** with independently labeled cases for research. Included synthetic cases are demonstrations, not evidence of real-world accuracy.
 
 ## Troubleshooting

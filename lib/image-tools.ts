@@ -1,9 +1,56 @@
-let cvPromise:Promise<any>|null=null;
-export async function getCV():Promise<any>{if(!cvPromise)cvPromise=(async()=>{const w=window as any;if(!w.cv)await new Promise<void>((resolve,reject)=>{const s=document.createElement('script');s.src='/ocr/opencv.js';s.onload=()=>resolve();s.onerror=()=>{s.remove();reject(Error('Image-quality engine unavailable. Reconnect and try again.'));};document.head.appendChild(s);});return await w.cv;})();try{return await cvPromise;}catch(e){cvPromise=null;throw e;}}
-export async function imageQuality(canvas:HTMLCanvasElement){
- const sample=document.createElement('canvas'),scale=Math.min(1,900/Math.max(canvas.width,canvas.height));sample.width=Math.round(canvas.width*scale);sample.height=Math.round(canvas.height*scale);const ctx=sample.getContext('2d')!;ctx.drawImage(canvas,0,0,sample.width,sample.height);const data=ctx.getImageData(0,0,sample.width,sample.height).data;let light=0,bright=0;for(let i=0;i<data.length;i+=4){const l=.299*data[i]+.587*data[i+1]+.114*data[i+2];light+=l;if(l>248)bright++;}const count=data.length/4,brightness=light/count,brightFraction=bright/count;let sharpness:number|null=null;
- try{const cv=await getCV(),src=cv.imread(sample),gray=new cv.Mat(),lap=new cv.Mat(),mean=new cv.Mat(),std=new cv.Mat();try{cv.cvtColor(src,gray,cv.COLOR_RGBA2GRAY);cv.Laplacian(gray,lap,cv.CV_64F);cv.meanStdDev(lap,mean,std);sharpness=std.data64F[0]**2;}finally{[src,gray,lap,mean,std].forEach(m=>m.delete());}}catch{}
- const warnings=[];if(brightness<65)warnings.push('Move to brighter, even lighting. Low light can hide letters and QR squares.');if(brightFraction>.65)warnings.push('Check for reflections or washed-out text. Large white backgrounds can trigger this too.');if(sharpness!==null&&sharpness<60)warnings.push('Hold the camera steady and tap to focus. Blur may hide small characters.');
- return {brightness,sharpness,brightFraction,warnings};
+import {measurePixels, enhancePixels} from './image-pixels.js';
+
+// Quality hints must not depend on an OCR engine download.
+export async function imageQuality(canvas:HTMLCanvasElement,checkResolution=true){
+ const sample=document.createElement('canvas');
+ const scale=Math.min(1,900/Math.max(canvas.width,canvas.height));
+ sample.width=Math.max(1,Math.round(canvas.width*scale));sample.height=Math.max(1,Math.round(canvas.height*scale));
+ const ctx=sample.getContext('2d',{willReadFrequently:true})!;
+ ctx.drawImage(canvas,0,0,sample.width,sample.height);
+ const stats=measurePixels(ctx.getImageData(0,0,sample.width,sample.height).data,sample.width,sample.height);
+ const warnings:string[]=[];
+ if(stats.brightness<65)warnings.push('Use even lighting. For a dark screen, increase its brightness or upload a screenshot.');
+ if(stats.sharpness<60)warnings.push('Small text may be blurred or too far away. Move closer and hold steady while the camera focuses.');
+ if(checkResolution&&Math.max(canvas.width,canvas.height)<1200)warnings.push('This image has limited resolution. Fill the frame with the message or use an original screenshot.');
+ return {...stats,warnings};
 }
-export async function preprocessCanvas(canvas:HTMLCanvasElement){const cv=await getCV(),src=cv.imread(canvas),gray=new cv.Mat(),out=new cv.Mat();try{cv.cvtColor(src,gray,cv.COLOR_RGBA2GRAY);cv.threshold(gray,out,0,255,cv.THRESH_BINARY+cv.THRESH_OTSU);const result=document.createElement('canvas');cv.imshow(result,out);return result;}finally{[src,gray,out].forEach(m=>m.delete());}}
+
+// Retain grayscale detail instead of permanently binarizing faint letters.
+export async function preprocessCanvas(canvas:HTMLCanvasElement){
+ const result=document.createElement('canvas');result.width=canvas.width;result.height=canvas.height;
+ const ctx=result.getContext('2d',{willReadFrequently:true})!;ctx.drawImage(canvas,0,0);
+ const image=ctx.getImageData(0,0,result.width,result.height);
+ enhancePixels(image.data);ctx.putImageData(image,0,0);return result;
+}
+
+export function bitmapCanvas(bitmap:ImageBitmap){
+ if(bitmap.width*bitmap.height>40000000)throw Error('Use an image under 40 megapixels.');
+ const canvas=document.createElement('canvas');
+ // Keep more small-letter detail than the old 2400px limit while bounding memory.
+ const scale=Math.min(1,3200/Math.max(bitmap.width,bitmap.height),Math.sqrt(8000000/(bitmap.width*bitmap.height)));
+ canvas.width=Math.max(1,Math.round(bitmap.width*scale));canvas.height=Math.max(1,Math.round(bitmap.height*scale));
+ const ctx=canvas.getContext('2d')!;ctx.fillStyle='white';ctx.fillRect(0,0,canvas.width,canvas.height);
+ ctx.drawImage(bitmap,0,0,canvas.width,canvas.height);return canvas;
+}
+
+export function ocrCanvas(canvas:HTMLCanvasElement){
+ const result=document.createElement('canvas'),padding=20;
+ // Upscaling cannot recover detail missing from a blurry photo.
+ const scale=Math.min(2,Math.max(1,1500/Math.max(canvas.width,canvas.height)));
+ result.width=Math.round(canvas.width*scale)+padding*2;result.height=Math.round(canvas.height*scale)+padding*2;
+ const ctx=result.getContext('2d')!;ctx.fillStyle='white';ctx.fillRect(0,0,result.width,result.height);
+ ctx.imageSmoothingQuality='high';ctx.drawImage(canvas,padding,padding,result.width-padding*2,result.height-padding*2);
+ return result;
+}
+
+export function rotateCanvas(source:HTMLCanvasElement,turns:number,maxSide=Infinity){
+ const turn=((turns%4)+4)%4,result=document.createElement('canvas');
+ const scale=Math.min(1,maxSide/Math.max(source.width,source.height));
+ const width=Math.max(1,Math.round(source.width*scale)),height=Math.max(1,Math.round(source.height*scale));
+ // Swap dimensions for quarter turns so the ends of landscape text cannot be clipped.
+ result.width=turn%2?height:width;result.height=turn%2?width:height;
+ const ctx=result.getContext('2d')!;ctx.fillStyle='white';ctx.fillRect(0,0,result.width,result.height);
+ ctx.translate(result.width/2,result.height/2);ctx.rotate(turn*Math.PI/2);
+ ctx.imageSmoothingQuality='high';ctx.drawImage(source,-width/2,-height/2,width,height);
+ return result;
+}
