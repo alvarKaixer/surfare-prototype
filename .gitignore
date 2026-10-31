@@ -1,0 +1,15 @@
+node_modules/
+dist/
+.wrangler/
+.vercel/
+.env
+.env.*
+!.env.example
+.dev.vars
+.dev.vars.*
+!.dev.vars.example
+public/ocr/
+*.traineddata
+*.tsbuildinfo
+.DS_Store
+Thumbs.db

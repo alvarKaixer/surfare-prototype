@@ -1,0 +1,20 @@
+[
+{"id":"en-01","language":"English","label":"scam","text":"Your bank account has been suspended. Reply with your password and OTP immediately to restore access."},
+{"id":"en-02","language":"English","label":"scam","text":"You won a cash prize! Transfer a processing fee today to release your reward."},
+{"id":"en-03","language":"English","label":"scam","text":"Congratulations! Click to claim your gift card. Only 2 minutes remain. Enter your information on the next page."},
+{"id":"en-04","language":"English","label":"legitimate","text":"The office meeting starts at 10 AM. Please bring the printed agenda."},
+{"id":"en-05","language":"English","label":"legitimate","text":"Thank you for buying a bookstore gift card. Your receipt is attached."},
+{"id":"en-06","language":"English","label":"legitimate","text":"Never send your OTP or password to another person. Contact official support if a stranger asks."},
+{"id":"fil-01","language":"Filipino","label":"scam","text":"Nanalo ka ng premyo! Magbayad ng bayad ngayon bago makuha ang premyo."},
+{"id":"fil-02","language":"Filipino","label":"scam","text":"Ibigay ang OTP ngayon para hindi mawala ang iyong account."},
+{"id":"fil-03","language":"Filipino","label":"scam","text":"Siguradong doble ang pera mo sa investment namin. Magdeposit ngayon."},
+{"id":"fil-04","language":"Filipino","label":"legitimate","text":"Magandang umaga. May pagpupulong tayo bukas sa paaralan. Dalhin ang inyong kuwaderno."},
+{"id":"fil-05","language":"Filipino","label":"legitimate","text":"Huwag ibigay ang OTP o password mo sa ibang tao."},
+{"id":"fil-06","language":"Filipino","label":"legitimate","text":"Salamat sa regalo mo para sa aking kaarawan. Nagustuhan ko ang aklat."},
+{"id":"tag-01","language":"Taglish","label":"scam","text":"GCash support po ito. Send your OTP ngayon para ma-verify ang account mo."},
+{"id":"tag-02","language":"Taglish","label":"scam","text":"May online job kami. Pay the registration fee para makapag-start sa task."},
+{"id":"tag-03","language":"Taglish","label":"scam","text":"Nanalo ka ng gift card! Click continue to claim your prize. Only 5 minutes left."},
+{"id":"tag-04","language":"Taglish","label":"legitimate","text":"Hi team, meeting natin at 4 PM. Bring your notes para ma-finalize ang paper."},
+{"id":"tag-05","language":"Taglish","label":"legitimate","text":"Happy birthday! May bookstore gift card ako para sa iyo. Enjoy reading!"},
+{"id":"tag-06","language":"Taglish","label":"legitimate","text":"Reminder lang: never share your password. Keep your account secure."}
+]

@@ -1,0 +1,12 @@
+import {createRequire} from 'node:module';
+import {dirname,join} from 'node:path';
+import {mkdir,copyFile,readdir} from 'node:fs/promises';
+const require=createRequire(import.meta.url);
+const tess=dirname(require.resolve('tesseract.js/package.json'));
+const core=dirname(createRequire(join(tess,'package.json')).resolve('tesseract.js-core/package.json'));
+await mkdir('public/ocr',{recursive:true});
+await copyFile(join(tess,'dist/worker.min.js'),'public/ocr/worker.min.js');
+for(const file of await readdir(core))if(/lstm.*\.wasm(?:\.js)?$/.test(file))await copyFile(join(core,file),'public/ocr/'+file);
+await copyFile(require.resolve('@techstark/opencv-js'),'public/ocr/opencv.js');
+await copyFile('node_modules/@tesseract.js-data/eng/4.0.0/eng.traineddata.gz','public/ocr/eng.traineddata.gz');
+console.log('Local OCR, OpenCV and language assets ready');

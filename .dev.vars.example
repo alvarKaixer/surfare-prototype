@@ -1,0 +1,2 @@
+# Copy to .dev.vars for local Cloudflare development. Never commit the real file.
+GOOGLE_SAFE_BROWSING_API_KEY=replace_with_your_google_key
