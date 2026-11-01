@@ -11,13 +11,13 @@ import {
   Download,
   LoaderCircle,
 } from 'lucide-react';
-import { normalizeUrl } from '../lib/detection.js';
+import { normalizeUrl } from '../lib/url-input.js';
 import { combineAssessment } from '../lib/assessment.js';
 import { applySemanticAssessment } from '../lib/semantic-assessment.js';
 import { inspectFileBytes } from '../lib/file-validation.js';
 import { inspectImageProvenance } from '../lib/image-provenance.js';
 import ImageProvenance from './components/ImageProvenance';
-import { assessContent } from '../lib/content-assessment.js';
+import { loadLocalAssessment } from './services/local-assessment';
 import Assessment from './components/Assessment';
 import CheckLoading from './components/CheckLoading';
 import {
@@ -30,6 +30,10 @@ import {
 import { recognizeImage } from '../lib/ocr.js';
 import ImageEditor from './components/ImageEditor';
 import Readiness from './components/Readiness';
+import ImageReview from './components/ImageReview';
+import { imageOriginVerdict } from '../lib/image-origin.js';
+import { imageRequest } from './services/image-request';
+import { needsAiBackup } from '../lib/assessment-policy.js';
 
 const tabs = [
   { name: 'Text message', icon: MessageSquare },
@@ -54,7 +58,7 @@ export default function App() {
     [confidence, setConfidence] = useState<number | null>(null),
     [camera, setCamera] = useState(false),
     [offline, setOffline] = useState(''),
-    [preprocess, setPreprocess] = useState(true);
+    [preprocess, setPreprocess] = useState(false);
   const [aiConsent, setAiConsent] = useState(false),
     [aiConfigured, setAiConfigured] = useState(false),
     [semantic, setSemantic] = useState<any>(null);
@@ -65,6 +69,13 @@ export default function App() {
     }),
     [provenance, setProvenance] = useState<any>(null);
   const [servicesLoading, setServicesLoading] = useState(true);
+  const [imageMode, setImageMode] = useState<'origin' | 'text'>('origin'),
+    [imageReview, setImageReview] = useState<any>(null),
+    [textSource, setTextSource] = useState<'ocr' | 'vision'>('ocr');
+  const aiChoice = useRef<boolean | null>(null),
+    linkChoice = useRef<boolean | null>(null),
+    services = useRef<any>({ ai: null, links: false }),
+    refreshServices = useRef<() => Promise<void>>(async () => {});
   const [fileInfo, setFileInfo] = useState(''),
     [qualityStats, setQualityStats] = useState<any>(null),
     [elapsed, setElapsed] = useState<number | null>(null),
@@ -103,34 +114,42 @@ export default function App() {
   }, []);
   useEffect(() => {
     let active = true;
-    const controller = new AbortController(),
-      timer = setTimeout(() => controller.abort(), 5000);
-    Promise.allSettled([
-      fetch('/api/verify', { signal: controller.signal })
-        .then((r) => r.json())
-        .then((d) => {
-          if (active) {
-            setConfigured(d.configured === true);
-            setConsent(d.configured === true);
-          }
-        }),
-      fetch('/api/assess', { signal: controller.signal })
-        .then((r) => r.json())
-        .then((d) => {
-          if (active) {
-            setAiConfigured(d.configured === true);
-            setAiConsent(d.configured === true);
-            setAiService(d);
-          }
-        }),
-    ]).finally(() => {
-      clearTimeout(timer);
+    const refresh = async () => {
+      await Promise.allSettled([
+        fetch('/api/verify', { signal: AbortSignal.timeout(3000), cache: 'no-store' })
+          .then((r) => r.json())
+          .then((d) => {
+            if (active) {
+              services.current.links = d.configured === true;
+              setConfigured(d.configured === true);
+              setConsent(linkChoice.current ?? d.configured === true);
+            }
+          }),
+        fetch('/api/assess', { signal: AbortSignal.timeout(3000), cache: 'no-store' })
+          .then((r) => r.json())
+          .then((d) => {
+            if (active) {
+              services.current.ai = d;
+              setAiConfigured(d.configured === true);
+              setAiConsent(aiChoice.current ?? d.configured === true);
+              setAiService(d);
+            }
+          }),
+      ]);
+    };
+    refreshServices.current = refresh;
+    refresh().finally(() => {
       if (active) setServicesLoading(false);
     });
+    const onFocus = () => {
+      if (navigator.onLine) void refresh();
+    };
+    window.addEventListener('focus', onFocus);
+    window.addEventListener('online', onFocus);
     return () => {
       active = false;
-      clearTimeout(timer);
-      controller.abort();
+      window.removeEventListener('focus', onFocus);
+      window.removeEventListener('online', onFocus);
     };
   }, []);
   useEffect(() => {
@@ -164,9 +183,6 @@ export default function App() {
       setLiveQuality(null);
     };
   }, [camera]);
-  useEffect(() => {
-    if (tab === 2) getOcrWorker().catch(() => {});
-  }, [tab]);
   async function getOcrWorker() {
     if (worker.current) return worker.current;
     if (!workerLoading.current)
@@ -179,13 +195,14 @@ export default function App() {
             failed = true;
             reject(
               Error(
-                'The text reader could not load. Reconnect and try again, or paste the message as text.',
+                'The local text reader could not start. Try AI backup, another browser, or paste the text.',
               ),
             );
           };
-          timer = setTimeout(fail, 60000);
+          timer = setTimeout(fail, 20000);
           createWorker('eng', 1, {
             workerPath: '/ocr/worker.min.js',
+            workerBlobURL: false,
             corePath: '/ocr',
             langPath: '/ocr',
             cachePath: 'surfare-lstm-v2',
@@ -217,6 +234,8 @@ export default function App() {
     setCamera(false);
   }
   function reset(next = tab) {
+    setImageReview(null);
+    setTextSource('ocr');
     setProvenance(null);
     setSemantic(null);
     canvasRef.current = null;
@@ -238,24 +257,48 @@ export default function App() {
     setConfidence(null);
     if (fileRef.current) fileRef.current.value = '';
   }
-  async function assess(text: string, urls: string[] = [], uncertain = false) {
+  async function assess(
+    text: string,
+    urls: string[] = [],
+    uncertain = false,
+    providedAi: any = null,
+  ) {
     const kind = tab === 3 ? 'qr' : tab === 2 ? 'image' : tab === 1 ? 'link' : 'message';
     setStage('Checking warning signs');
+    const { assessContent } = await loadLocalAssessment();
     const local = assessContent({ text, urls, kind, uncertain });
     setResult(null);
     setVerification(null);
-    let ai: any = {
+    if (
+      local.level === 'Insufficient evidence' &&
+      aiChoice.current !== false &&
+      navigator.onLine &&
+      !services.current.ai?.configured
+    )
+      await refreshServices.current();
+    const aiAllowed = aiChoice.current ?? services.current.ai?.configured === true;
+    let ai: any = providedAi || {
         status: 'not_checked',
-        message: !aiConsent
-          ? 'Contextual AI was not selected. Local rules do not establish the meaning or safety of this message.'
-          : !navigator.onLine
-            ? 'Contextual AI is unavailable offline. Local findings only.'
-            : 'Contextual AI has not completed.',
+        message:
+          local.level !== 'Insufficient evidence'
+            ? 'A local warning matched. AI backup was not needed.'
+            : !aiAllowed
+              ? 'Contextual AI was not selected. Local rules do not establish the meaning or safety of this message.'
+              : !navigator.onLine
+                ? 'Contextual AI is unavailable offline. Local findings only.'
+                : 'Contextual AI has not completed.',
       },
       reputation: any = null;
     setSemantic(null);
     const tasks: Promise<void>[] = [];
-    if (aiConsent && aiConfigured && navigator.onLine && text.trim())
+    if (
+      !providedAi &&
+      needsAiBackup(local, {
+        enabled: aiAllowed,
+        configured: services.current.ai?.configured,
+        online: navigator.onLine,
+      })
+    )
       tasks.push(
         (async () => {
           setBusy('Reading message meaning…');
@@ -264,8 +307,13 @@ export default function App() {
             const response = await fetch('/api/assess', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ text, kind, consent: true, provider: aiService.providerId }),
-              signal: AbortSignal.timeout(45000),
+              body: JSON.stringify({
+                text,
+                kind,
+                consent: true,
+                provider: services.current.ai?.providerId,
+              }),
+              signal: AbortSignal.timeout(28000),
             });
             ai = await response.json();
             if (!['completed', 'unavailable', 'not_checked'].includes(ai.status)) throw Error();
@@ -278,10 +326,21 @@ export default function App() {
           }
         })(),
       );
-    if (consent && configured && local.urls.length && navigator.onLine)
+    if (
+      (linkChoice.current ?? services.current.links) &&
+      services.current.links &&
+      local.urls.length &&
+      navigator.onLine
+    )
       tasks.push(
         (async () => {
-          if (!aiConsent) {
+          if (
+            !needsAiBackup(local, {
+              enabled: aiAllowed,
+              configured: services.current.ai?.configured,
+              online: navigator.onLine,
+            })
+          ) {
             setBusy('Checking URL reputation…');
             setStage('Checking link reputation');
           }
@@ -290,7 +349,7 @@ export default function App() {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ urls: local.urls.map((u: any) => u.url) }),
-              signal: AbortSignal.timeout(15000),
+              signal: AbortSignal.timeout(10000),
             });
             reputation = await response.json();
           } catch {
@@ -345,6 +404,7 @@ export default function App() {
     }
   }
   async function stageCanvas(c: HTMLCanvasElement, name: string, remember = true) {
+    setImageReview(null);
     if (remember) setProvenance(null);
     setResult(null);
     setVerification(null);
@@ -411,67 +471,126 @@ export default function App() {
   }
   async function processCanvas(canvas: HTMLCanvasElement) {
     scanning.current = true;
-    setBusy('Reading image...');
+    setBusy('Checking image...');
     setError('');
     setResult(null);
     setVerification(null);
     setQr('');
     setExtracted('');
     setConfidence(null);
+    setImageReview(null);
     try {
-      setStage('Reading image and embedded QR');
+      if (tab === 2 && imageMode === 'origin') {
+        setStage('Checking AI creation metadata');
+        const initial = imageOriginVerdict(provenance, null);
+        if (!['High', 'Medium'].includes(initial.confidence)) {
+          if (aiChoice.current !== false && navigator.onLine && !services.current.ai?.configured)
+            await refreshServices.current();
+          const enabled = aiChoice.current ?? services.current.ai?.configured === true;
+          if (enabled && services.current.ai?.configured && navigator.onLine) {
+            setStage('Reviewing image pixels');
+            try {
+              setImageReview(await imageRequest(canvas, services.current.ai.providerId, 'origin'));
+            } catch {
+              setImageReview({
+                status: 'unavailable',
+                message: 'The image review could not finish. Metadata was checked locally.',
+              });
+            }
+          } else
+            setImageReview({
+              status: 'not_checked',
+              message: !navigator.onLine
+                ? 'AI visual review is offline. Metadata was checked locally.'
+                : 'AI visual review is unavailable or disabled. Metadata was checked locally.',
+            });
+        }
+        setResult({
+          level: 'Insufficient evidence',
+          sourceText: '',
+          urls: [],
+          indicators: [],
+          limitations: [],
+          recommendation: '',
+        });
+        return;
+      }
+      setStage('Reading QR content');
       const decoded = await decodeQr(canvas);
       setQr(decoded);
       if (tab === 3) {
         if (!decoded) {
-          setResult({
-            level: 'Insufficient evidence',
-            indicators: [],
-            urls: [],
-            limitations: ['No readable QR code found.'],
-            recommendation:
-              'Try a sharp, straight-on image showing the entire QR code and its white border.',
-          });
+          setError('No QR code found. Try a sharper image.');
           return;
         }
         await assess(decoded);
         return;
       }
-      setStage('Recognizing image text');
-      setBusy('Preparing text reader...');
-      const engine = await getOcrWorker(),
-        source = ocrCanvas(canvas);
-      const data = await recognizeImage(engine, source, {
-        retry: preprocess,
-        prepareRetry: (image: HTMLCanvasElement) => preprocessCanvas(image),
-        checkOrientation: true,
-        prepareRotation: async (turn: number, full: boolean) =>
-          rotateCanvas(source, turn, full ? Infinity : 1400),
-        onOrientation: (degrees: number) => {
-          if (degrees) {
-            setStage('Text orientation corrected by ' + degrees + ' degrees');
-          } else {
-            setStage('Checking sideways and upside-down text');
-            setBusy('Checking text orientation...');
+      setStage('Reading text on this device');
+      setTextSource('ocr');
+      try {
+        const engine = await getOcrWorker(),
+          source = ocrCanvas(canvas);
+        let timer: ReturnType<typeof setTimeout> | undefined;
+        const data: any = await Promise.race([
+          recognizeImage(engine, source, {
+            retry: preprocess,
+            prepareRetry: (image: HTMLCanvasElement) => preprocessCanvas(image),
+            checkOrientation: preprocess,
+            prepareRotation: async (turn: number, full: boolean) =>
+              rotateCanvas(source, turn, full ? Infinity : 1400),
+            onRetry: () => setStage('Trying enhanced text reading'),
+          }),
+          new Promise((_, reject) => {
+            timer = setTimeout(() => reject(Error('Text reading took too long.')), 15000);
+          }),
+        ]).finally(() => clearTimeout(timer));
+        if (
+          !data.text.trim() ||
+          (data.confidence < 35 && (data.text.match(/[\p{L}\p{N}]/gu) || []).length < 20)
+        )
+          throw Error('No clear text found.');
+        setExtracted(data.text.trim());
+        setConfidence(data.confidence);
+        await assess(data.text + '\n' + decoded, [], data.confidence < 65);
+      } catch (error: any) {
+        await worker.current?.terminate().catch(() => {});
+        worker.current = null;
+        workerLoading.current = null;
+        if (decoded) {
+          const { assessContent } = await loadLocalAssessment();
+          if (
+            ['Suspicious', 'High risk'].includes(assessContent({ text: decoded, kind: 'qr' }).level)
+          ) {
+            await assess(decoded);
+            return;
           }
-        },
-        onRetry: () => {
-          setStage('Trying another text layout for this difficult image');
-          setBusy('Improving text reading...');
-        },
-      });
-      setExtracted(data.text.trim());
-      setConfidence(data.confidence);
-      if (!data.text.trim())
-        setQuality((q) => [
-          ...q,
-          'No readable text found. Upload an original screenshot, or crop closer and retake the photo in focus.',
-        ]);
-      await assess(data.text + '\n' + decoded, [], data.confidence < 65 || !data.text.trim());
-    } catch (e: any) {
-      setError(
-        e.message || 'Could not process this image. Try an original screenshot or a clearer photo.',
-      );
+        }
+        if (aiChoice.current !== false && navigator.onLine && !services.current.ai?.configured)
+          await refreshServices.current();
+        const enabled = aiChoice.current ?? services.current.ai?.configured === true;
+        if (enabled && services.current.ai?.configured && navigator.onLine) {
+          setStage('Using AI text-reading backup');
+          let review: any;
+          try {
+            review = await imageRequest(canvas, services.current.ai.providerId, 'content');
+          } catch {
+            review = {
+              status: 'unavailable',
+              message:
+                'Text reading and AI backup could not finish. Try a crop or paste the message.',
+            };
+          }
+          const text = review.status === 'completed' ? review.extractedText : '';
+          setExtracted(text);
+          setTextSource('vision');
+          setConfidence(null);
+          await assess(text + '\n' + decoded, [], false, review);
+        } else
+          setError(error.message + ' Use AI image check for image origin, or paste the message.');
+      }
+    } catch (error: any) {
+      setError(error.message || 'The image could not be checked. Try a smaller crop.');
     } finally {
       scanning.current = false;
       setBusy('');
@@ -481,6 +600,7 @@ export default function App() {
     stopCamera();
     setError('');
     setProvenance(null);
+    setImageReview(null);
     setBusy('Opening image...');
     try {
       const type = inspectFileBytes(
@@ -626,15 +746,24 @@ export default function App() {
     linksEnabled = configured && consent;
   const aiRecipient =
     aiService.providerId === 'openrouter' ? 'OpenRouter and its model provider' : 'Google Gemini';
-  const sharingNotice = !online
-    ? 'Offline: only on-device checks will run.'
-    : aiEnabled && linksEnabled
-      ? 'Check sends text to ' + aiRecipient + ' and detected URLs to Google. Images stay here.'
+  const checkNotice =
+    tab === 2
+      ? !aiEnabled
+        ? 'Image reading stays on this device. AI backup is disabled or unavailable.'
+        : imageMode === 'origin'
+          ? 'Metadata is checked first. If needed, a resized image is sent to ' + aiRecipient + '.'
+          : 'Text is read locally first. AI backup may receive text or a resized image via ' +
+            aiRecipient +
+            '.'
       : aiEnabled
-        ? 'Check sends text to ' + aiRecipient + '. Images stay here.'
-        : linksEnabled
-          ? 'Check sends detected URLs to Google. Other checks stay on this device.'
-          : 'Only on-device checks are enabled.';
+        ? 'Local checks first. Unmatched text may be sent to ' + aiRecipient + '.'
+        : 'Local checks only.';
+  const sharingNotice = !online
+    ? 'Offline: checks stay on this device.'
+    : checkNotice +
+      (linksEnabled && !(tab === 2 && imageMode === 'origin')
+        ? ' Detected URLs are checked by Google.'
+        : '');
   return (
     <main>
       <header>
@@ -697,6 +826,9 @@ export default function App() {
               <textarea
                 disabled={!!busy}
                 id="content"
+                onFocus={() => {
+                  void loadLocalAssessment().catch(() => {});
+                }}
                 maxLength={12000}
                 value={input}
                 onChange={(e) => {
@@ -780,6 +912,32 @@ export default function App() {
           ) : (
             <div className="entry">
               <label>{tab === 2 ? 'Screenshot or photo' : 'QR image'}</label>
+              {tab === 2 && (
+                <div className="image-purpose" aria-label="Image check purpose">
+                  <button
+                    disabled={!!busy}
+                    aria-pressed={imageMode === 'origin'}
+                    onClick={() => {
+                      setImageMode('origin');
+                      setResult(null);
+                      setImageReview(null);
+                    }}
+                  >
+                    AI image check
+                  </button>
+                  <button
+                    disabled={!!busy}
+                    aria-pressed={imageMode === 'text'}
+                    onClick={() => {
+                      setImageMode('text');
+                      setResult(null);
+                      setImageReview(null);
+                    }}
+                  >
+                    Read message text
+                  </button>
+                </div>
+              )}
               <button
                 disabled={!!busy}
                 className="dropzone"
@@ -816,10 +974,11 @@ export default function App() {
               <details className="input-disclosure">
                 <summary>Image tips & options</summary>
                 <p className="capture-tip">
-                  An original screenshot reads best. For photos, crop to the message and avoid blur
-                  or glare.
+                  {tab === 2 && imageMode === 'origin'
+                    ? 'Use the original file to preserve creation metadata. Screenshots can remove it.'
+                    : 'An original screenshot reads best. Crop photos to the message and avoid blur or glare.'}
                 </p>
-                {tab === 2 && (
+                {tab === 2 && imageMode === 'text' && (
                   <label className="checkbox">
                     <input
                       type="checkbox"
@@ -827,7 +986,7 @@ export default function App() {
                       disabled={!!busy}
                       onChange={(e) => setPreprocess(e.target.checked)}
                     />
-                    Retry weak text recognition
+                    Enhanced text reading (slower)
                   </label>
                 )}
                 {qualityStats && (
@@ -877,11 +1036,12 @@ export default function App() {
                   <p className="file-info">{fileInfo}</p>
                 </>
               )}
-              {quality.map((n) => (
-                <p className="quality" key={n}>
-                  {n}
-                </p>
-              ))}
+              {!(tab === 2 && imageMode === 'origin') &&
+                quality.map((n) => (
+                  <p className="quality" key={n}>
+                    {n}
+                  </p>
+                ))}
               {!busy && qr && (
                 <details className="input-disclosure">
                   <summary>Decoded QR content</summary>
@@ -890,7 +1050,10 @@ export default function App() {
               )}
               {!busy && extracted && (
                 <details className="input-disclosure extracted">
-                  <summary>Review extracted text · {confidence?.toFixed(0)}% OCR</summary>
+                  <summary>
+                    Review extracted text ·{' '}
+                    {confidence === null ? 'AI backup' : confidence.toFixed(0) + '% OCR'}
+                  </summary>
                   <label htmlFor="ocr">Extracted text</label>
                   <textarea
                     id="ocr"
@@ -934,8 +1097,8 @@ export default function App() {
                       : !aiConfigured
                         ? 'AI unavailable'
                         : aiEnabled
-                          ? 'AI context on'
-                          : 'AI context off'}
+                          ? 'AI backup on'
+                          : 'AI backup off'}
                   </span>
                   <span className={linksEnabled && online ? 'enabled' : ''}>
                     <LinkIcon size={12} />
@@ -959,11 +1122,14 @@ export default function App() {
                     type="checkbox"
                     disabled={!!busy || servicesLoading || !aiConfigured}
                     checked={aiConsent}
-                    onChange={(e) => setAiConsent(e.target.checked)}
+                    onChange={(e) => {
+                      aiChoice.current = e.target.checked;
+                      setAiConsent(e.target.checked);
+                    }}
                   />
                   <span>
                     <strong>
-                      AI context{' '}
+                      AI backup{' '}
                       <em>
                         {aiConfigured
                           ? aiService.providerId === 'openrouter'
@@ -972,7 +1138,7 @@ export default function App() {
                           : 'Unavailable'}
                       </em>
                     </strong>
-                    <small>Reads meaning and implied threats in every submitted message.</small>
+                    <small>Used when local checks find no clear match.</small>
                   </span>
                 </label>
                 <label className="checkbox consent option-row">
@@ -981,7 +1147,10 @@ export default function App() {
                     disabled={!!busy || servicesLoading || !configured}
                     type="checkbox"
                     checked={consent}
-                    onChange={(e) => setConsent(e.target.checked)}
+                    onChange={(e) => {
+                      linkChoice.current = e.target.checked;
+                      setConsent(e.target.checked);
+                    }}
                   />
                   <span>
                     <strong>
@@ -1063,30 +1232,43 @@ export default function App() {
             <CheckLoading stage={stage && stage !== 'Complete' ? stage : busy} />
           ) : result ? (
             <div className="result-reveal" key={result.sourceText + '|' + elapsed}>
-              <Assessment
-                result={result}
-                semantic={semantic}
-                verification={verification}
-                elapsed={elapsed}
-                sourceLabel={
-                  tab === 2
-                    ? 'Extracted text · OCR'
-                    : tab === 3
-                      ? 'Decoded QR'
-                      : tab === 1
-                        ? 'Link'
-                        : 'Your message'
-                }
-                online={online}
-                consent={consent}
-                busy={false}
-                onError={setError}
-                onReset={() => {
-                  reset();
-                  document.getElementById('content')?.focus();
-                }}
-              />
-              {provenance && (
+              {tab === 2 && imageMode === 'origin' ? (
+                <ImageReview
+                  metadata={provenance}
+                  visual={imageReview}
+                  elapsed={elapsed}
+                  onReset={() => reset()}
+                />
+              ) : (
+                <Assessment
+                  result={result}
+                  semantic={semantic}
+                  verification={verification}
+                  elapsed={elapsed}
+                  sourceLabel={
+                    tab === 2
+                      ? qr && !extracted
+                        ? 'Decoded QR from image'
+                        : textSource === 'vision'
+                          ? 'Image text · AI backup'
+                          : 'Extracted text · OCR'
+                      : tab === 3
+                        ? 'Decoded QR'
+                        : tab === 1
+                          ? 'Link'
+                          : 'Your message'
+                  }
+                  online={online}
+                  consent={consent}
+                  busy={false}
+                  onError={setError}
+                  onReset={() => {
+                    reset();
+                    document.getElementById('content')?.focus();
+                  }}
+                />
+              )}
+              {provenance && !(tab === 2 && imageMode === 'origin') && (
                 <div className="result-provenance">
                   <ImageProvenance result={provenance} />
                 </div>
@@ -1125,14 +1307,14 @@ export default function App() {
       <details className="technical">
         <summary>How Surfare works</summary>
         <p>
-          Local rules and a small SMS model look for known warning signs. Optional AI checks meaning
-          and context in English, Filipino and Taglish. Google Safe Browsing checks URL reputation.
-          AI and local checks can make mistakes; no result guarantees safety.
+          Local rules and a small SMS model check first. AI backup checks meaning and context when
+          no local warning matches. Google Safe Browsing checks URL reputation. AI and local checks
+          can make mistakes; no result guarantees safety.
         </p>
         <p>
-          Images are read locally with Tesseract.js OCR and jsQR. Review recognized text before
-          relying on it. Metadata checks inspect original-file markers; they do not authenticate
-          images or detect AI from pixels. Screenshots can remove provenance.
+          AI image checks read original metadata first. Optional AI visual review looks for visible
+          clues when no marker is found. Read message text uses local OCR first, with AI backup if
+          needed. Screenshots can remove metadata; visual clues do not prove authenticity.
         </p>
         <p>
           Offline resources include the app and OCR model, approximately 18 MB. Contextual AI and

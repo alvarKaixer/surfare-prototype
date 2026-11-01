@@ -18,14 +18,15 @@ The repository's GitHub Actions workflow installs locked dependencies and runs `
 
 ## Server environment
 
-| Variable                       | Use                                      | Default                 |
-| ------------------------------ | ---------------------------------------- | ----------------------- |
-| `OPENROUTER_API_KEY`           | OpenRouter credentials                   | Unconfigured            |
-| `GOOGLE_SAFE_BROWSING_API_KEY` | Google Safe Browsing credentials         | Unconfigured            |
-| `AI_PROVIDER`                  | `auto`, `openrouter` or `gemini`         | `auto`                  |
-| `OPENROUTER_MODEL`             | Free router or an explicit `:free` model | `openrouter/free`       |
-| `GEMINI_API_KEY`               | Optional Google Gemini credentials       | Unconfigured            |
-| `GEMINI_MODEL`                 | Optional Gemini model override           | `gemini-3.1-flash-lite` |
+| Variable                       | Use                                         | Default                 |
+| ------------------------------ | ------------------------------------------- | ----------------------- |
+| `OPENROUTER_API_KEY`           | OpenRouter credentials                      | Unconfigured            |
+| `GOOGLE_SAFE_BROWSING_API_KEY` | Google Safe Browsing credentials            | Unconfigured            |
+| `AI_PROVIDER`                  | `auto`, `openrouter` or `gemini`            | `auto`                  |
+| `OPENROUTER_MODEL`             | Free router or an explicit `:free` model    | `openrouter/free`       |
+| `OPENROUTER_IMAGE_MODEL`       | Optional free vision-capable model override | `openrouter/free`       |
+| `GEMINI_API_KEY`               | Optional Google Gemini credentials          | Unconfigured            |
+| `GEMINI_MODEL`                 | Optional Gemini model override              | `gemini-3.1-flash-lite` |
 
 `auto` prefers OpenRouter when its key exists. It does not retry through Gemini after an OpenRouter failure. Paid OpenRouter model IDs are rejected and provider price ceilings are zero.
 
@@ -38,7 +39,7 @@ Use `.dev.vars` for local Wrangler development. Production keys go in the select
 3. Add the required server environment variables for Production and any desired Preview environment.
 4. Deploy. Redeploy after changing server variables.
 
-`vercel.json` declares the Vite output, server-function durations, API-safe rewrites and service-worker cache header. Both `api/assess.js` and `api/verify.js` must deploy as server functions.
+`vercel.json` declares the Vite output, server-function durations, API-safe rewrites and service-worker cache header. `api/assess.js`, `api/image-assess.js` and `api/verify.js` must deploy as server functions. The image route uses the existing AI key; Gemini is optional when OpenRouter is configured.
 
 ## Cloudflare Workers
 
@@ -56,10 +57,11 @@ Enter secret values at the prompts, not in command arguments. Optional non-secre
 ## Verify a deployment
 
 - The homepage loads and displays the available checks.
-- `/api/assess` and `/api/verify` return JSON configuration status, never keys or HTML.
-- A synthetic message completes through AI, while failures remain visibly unavailable.
+- `/api/assess`, `/api/image-assess` and `/api/verify` return JSON configuration status, never keys or HTML.
+- A clear local warning skips AI; unmatched text invokes enabled AI backup. Failures remain visibly unavailable.
 - The built-in Google phishing test reports `SOCIAL_ENGINEERING` with link checks enabled. There is no need to open its destination.
-- Image upload, editable OCR and QR decoding work on the target browser.
+- AI image check shows explicit generation metadata without downloading OCR or sending the image. When metadata is absent, enabled visual review uses the image route.
+- Read message text, editable OCR and QR decoding work on the target browser.
 - Preparing offline resources enables local checks and OCR; AI and reputation still require a connection.
 - Validation navigation and research reports are absent from the deployed app.
 

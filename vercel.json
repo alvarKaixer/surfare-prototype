@@ -9,6 +9,9 @@
     },
     "api/assess.js": {
       "maxDuration": 60
+    },
+    "api/image-assess.js": {
+      "maxDuration": 40
     }
   },
   "headers": [

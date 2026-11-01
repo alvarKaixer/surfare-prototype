@@ -1,3 +1,4 @@
+import { generateStructured } from '../providers/structured.js';
 import {
   semanticKinds,
   semanticLevels,
@@ -10,9 +11,9 @@ export const semanticInstruction = `You assess the meaning of submitted messages
 Understand English, Filipino/Tagalog, colloquial spellings, contractions, code-switching (Taglish), conditional statements, ellipsis and implied consequences. Reason about who is threatening whom, demands, context and intent. Do not require exact keywords, explicit violence verbs, a phone number or a link. Threats may refer indirectly to death, returning home, approaching someone, debt collection, family, or exposure of private material.
 Classify the danger represented by the message as received. Direct or credibly implied violence, extortion, threats involving family, or sexual blackmail are High risk. Intimidation, concerning but ambiguous pursuit, targeted harassment, or plausible scams needing verification are Suspicious. Profanity alone, ordinary debt reminders, idioms, movie discussion and benign advice are not automatically violence. Distinguish negation from a negative consequence used as a threat. Never invent the missing part of an incomplete sentence; explain the implication and uncertainty.
 Use Low risk only when you can understand the text as an ordinary benign message and find no concerning meaning. Use Insufficient evidence when context, language or text quality prevents assessment. Low risk is not a safety guarantee. Threats reported or quoted by a recipient may still represent a real dangerous situation; do not dismiss them just because they are quoted.
-Return JSON following the schema. Explain the meaning in plain English. Findings must quote exact, contiguous text from the original submission, preserving its spelling and case, and explain why it matters in context. Limit findings to eight distinct issues. Do not output numeric probabilities. A High risk or Suspicious verdict requires at least one grounded finding; Low risk requires no findings. Do not invent sender identity, a specific method of harm absent from the wording, website reputation, or real-world verification. Offer appropriate next steps, including preserving evidence and seeking immediate local help for imminent personal danger. Do not output telephone or hotline numbers; recommend local emergency services without a number.`;
+Return JSON following the schema. Explain the meaning in plain English. Findings must quote exact, contiguous text from the original submission, preserving its spelling and case, and explain why it matters in context. Limit findings to four distinct issues. Keep summaries under 180 characters, recommendations under 220 characters and each explanation to one short sentence. Do not output numeric probabilities. A High risk or Suspicious verdict requires at least one grounded finding; Low risk requires no findings. Do not invent sender identity, a specific method of harm absent from the wording, website reputation, or real-world verification. Offer appropriate next steps, including preserving evidence and seeking immediate local help for imminent personal danger. Do not output telephone or hotline numbers; recommend local emergency services without a number.`;
 
-const schema = {
+export const semanticSchema = {
   type: 'object',
   properties: {
     level: { type: 'string', enum: semanticLevels },
@@ -136,127 +137,61 @@ export async function semanticCheck(request, env, fetcher = fetch) {
       },
       409,
     );
-  const { model } = config;
   try {
-    const submittedText = JSON.stringify({ inputType: body.kind, submittedText: body.text });
-    const openrouter = config.providerId === 'openrouter';
-    const payload = openrouter
-      ? {
-          model,
-          messages: [
-            { role: 'system', content: semanticInstruction },
-            { role: 'user', content: submittedText },
-          ],
-          response_format: {
-            type: 'json_schema',
-            json_schema: { name: 'message_safety', strict: true, schema },
+    const generated = await generateStructured({
+      config,
+      env,
+      instruction: semanticInstruction,
+      input: JSON.stringify({ inputType: body.kind, submittedText: body.text }),
+      schema: semanticSchema,
+      fetcher,
+    });
+    if (!generated.ok) {
+      const status = generated.http;
+      if (status === 429)
+        return json(
+          {
+            status: 'unavailable',
+            message:
+              'The contextual AI quota or rate limit was reached. No paid fallback or automatic retry was attempted. Local findings remain available.',
           },
-          max_tokens: 4096,
-          reasoning: { effort: 'low', exclude: true },
-          // A free model ID plus zero-price routing prevents switching to a paid endpoint.
-          provider: {
-            require_parameters: true,
-            max_price: { prompt: 0, completion: 0, request: 0, image: 0 },
+          429,
+        );
+      if ([401, 403].includes(status))
+        return json(
+          {
+            status: 'unavailable',
+            message:
+              'The AI provider rejected access. Check its API key and account privacy/access settings. Local warnings remain available.',
           },
-        }
-      : {
-          systemInstruction: { parts: [{ text: semanticInstruction }] },
-          contents: [{ role: 'user', parts: [{ text: submittedText }] }],
-          generationConfig: {
-            responseMimeType: 'application/json',
-            responseJsonSchema: schema,
-            maxOutputTokens: 4096,
-            ...(/^gemini-[34](?:[.-]|$)/.test(model)
-              ? { thinkingConfig: { thinkingLevel: 'low' } }
-              : {}),
+          502,
+        );
+      if (status === 402)
+        return json(
+          {
+            status: 'unavailable',
+            message:
+              'The provider account cannot use the selected free endpoint. No paid model was attempted. Local warnings remain available.',
           },
-        };
-    const response = await fetcher(
-      openrouter
-        ? 'https://openrouter.ai/api/v1/chat/completions'
-        : 'https://generativelanguage.googleapis.com/v1beta/models/' + model + ':generateContent',
-      {
-        method: 'POST',
-        headers: openrouter
-          ? {
-              'Content-Type': 'application/json',
-              Authorization: 'Bearer ' + env.OPENROUTER_API_KEY.trim(),
-            }
-          : { 'Content-Type': 'application/json', 'x-goog-api-key': env.GEMINI_API_KEY.trim() },
-        body: JSON.stringify(payload),
-        signal: AbortSignal.timeout(40000),
-      },
-    );
-    if (response.status === 429)
+          502,
+        );
       return json(
         {
           status: 'unavailable',
-          message:
-            'The contextual AI quota or rate limit was reached. No paid fallback or automatic retry was attempted. Local findings remain available.',
-        },
-        429,
-      );
-    if ([401, 403].includes(response.status))
-      return json(
-        {
-          status: 'unavailable',
-          message:
-            'The AI provider rejected access. Check its API key and account privacy/access settings. Local warnings remain available.',
-        },
-        502,
-      );
-    if (response.status === 402)
-      return json(
-        {
-          status: 'unavailable',
-          message:
-            'The provider account cannot use the selected free endpoint. No paid model was attempted. Local warnings remain available.',
-        },
-        502,
-      );
-    if (!response.ok) {
-      // Log only the HTTP status, never submitted text, credentials or the provider body.
-      console.warn('Contextual AI provider HTTP status:', response.status);
-      return json(
-        {
-          status: 'unavailable',
-          message:
-            'The contextual AI provider could not complete this check. Check the server key, model access and provider availability.',
+          message: generated.incomplete
+            ? 'The provider did not return a complete assessment. This is not a low-risk result.'
+            : 'The contextual AI provider could not complete this check. Local findings remain available.',
         },
         502,
       );
     }
-    const data = await response.json(),
-      candidate = openrouter ? data.choices?.[0] : data.candidates?.[0];
-    if (
-      data.error ||
-      data.promptFeedback?.blockReason ||
-      (openrouter
-        ? candidate?.finish_reason !== 'stop' || candidate?.message?.refusal
-        : candidate?.finishReason !== 'STOP')
-    )
-      return json(
-        {
-          status: 'unavailable',
-          message:
-            'The provider did not return a complete assessment. This is not a low-risk result.',
-        },
-        502,
-      );
-    const content = openrouter
-      ? candidate.message?.content
-      : (candidate.content?.parts || [])
-          .filter((p) => !p.thought && typeof p.text === 'string')
-          .map((p) => p.text)
-          .join('');
-    const analysis = JSON.parse(content);
-    validateSemanticResult(analysis, body.text);
+    validateSemanticResult(generated.value, body.text);
     return json({
       status: 'completed',
       provider: config.provider,
-      model: openrouter && typeof data.model === 'string' ? data.model : model,
+      model: generated.model,
       checkedAt: new Date().toISOString(),
-      analysis,
+      analysis: generated.value,
     });
   } catch (error) {
     if (error?.name === 'TimeoutError' || error?.name === 'AbortError')
@@ -264,7 +199,7 @@ export async function semanticCheck(request, env, fetcher = fetch) {
         {
           status: 'unavailable',
           message:
-            'The contextual AI did not respond within 40 seconds. Local warnings remain available; a timeout does not mean the message is safe.',
+            'The contextual AI did not respond within 25 seconds. Local warnings remain available; a timeout does not mean the message is safe.',
         },
         504,
       );

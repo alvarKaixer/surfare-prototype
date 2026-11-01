@@ -74,7 +74,13 @@ export default function Assessment({
         </div>
         <div>
           <span className="result-kicker">YOUR ASSESSMENT</span>
-          <h3>{level}</h3>
+          <h3>
+            {level === 'Insufficient evidence'
+              ? aiUnavailable
+                ? 'AI check unavailable'
+                : 'Needs review'
+              : level}
+          </h3>
         </div>
       </div>
       <div
@@ -105,7 +111,9 @@ export default function Assessment({
             ? 'AI assessed'
             : aiUnavailable
               ? 'AI unavailable · local checks only'
-              : 'Local checks only'}
+              : result.indicators?.length
+                ? 'Local match · AI not needed'
+                : 'Local checks only'}
         </span>
         {elapsed !== null && <span className="check-time">{(elapsed / 1000).toFixed(1)}s</span>}
       </div>
@@ -116,11 +124,10 @@ export default function Assessment({
       )}
       <p className="verdict-summary">{result.summary || result.recommendation}</p>
       {!!result.sourceText && (
-        <section className="evidence-reader">
-          <div className="evidence-header">
-            <span>{sourceLabel}</span>
-            {indicators.some((i: any) => i.evidence?.length) && <span>Tap a highlight</span>}
-          </div>
+        <details className="evidence-reader">
+          <summary className="evidence-header">
+            View checked message <span>{sourceLabel}</span>
+          </summary>
           <div
             className="evidence-text"
             aria-label="Analyzed content with highlighted warning signs"
@@ -155,7 +162,7 @@ export default function Assessment({
           {sourceLabel.includes('OCR') && (
             <p className="ocr-review-note">Review the extracted text against your image.</p>
           )}
-        </section>
+        </details>
       )}
       {active && (
         <details

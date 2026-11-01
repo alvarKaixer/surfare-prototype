@@ -1,15 +1,15 @@
 # Surfare
 
-Surfare checks messages, links, image text and QR codes for threats and suspicious requests. It combines contextual AI, local detection and Google Safe Browsing, then presents a risk category, highlighted evidence and practical next steps.
+Surfare checks messages, links, image text and QR codes for threats and suspicious requests. Local detection runs first, with contextual AI as a fallback when no warning matches. Google Safe Browsing adds link reputation. A separate image-origin check reads metadata first, with optional visual review.
 
 Built with React, TypeScript and Vite. Server adapters support Vercel and Cloudflare Workers.
 
 ## Features
 
-- AI context for English, Filipino and Taglish, with free-only OpenRouter routing and an optional Gemini provider.
+- Local warning patterns and an offline SMS model, with AI backup for unmatched English, Filipino and Taglish messages. Free-only OpenRouter routing and optional Gemini support.
 - Link reputation through Google Safe Browsing, without opening submitted destinations.
 - Local OCR and QR decoding, including image preview, crop, rotation and editable extracted text.
-- Original-file metadata inspection with explicit limits: missing provenance never proves authenticity.
+- Metadata-first AI image checks, with optional visual review when no explicit marker is found. Missing provenance never proves authenticity; evidence confidence is not a calibrated probability.
 - Offline local checks and prepared OCR resources; responsive UI with reduced-motion support.
 
 The research/validation screens are hidden from the shipped app. Research code and methodology remain available under [`research/`](research/README.md) and [`docs/VALIDATION.md`](docs/VALIDATION.md).
@@ -30,7 +30,7 @@ npm run dev
 
 Open **http://localhost:8787**. This command builds the client and starts its local Worker API. For UI hot reload, keep it running and start `npm run dev:ui` in another terminal. Restart the Worker after changing keys.
 
-Configured AI and reputation services are enabled by default. Content is sent only after **Check** is pressed. **Options & privacy** can disable either service. The app also runs without provider keys, with unavailable services clearly identified.
+Configured AI backup and reputation services are enabled by default. Content is sent only after **Check** is pressed. A local warning skips AI; unmatched messages use AI backup. **Options & privacy** can disable either service. The app also runs without provider keys, with unavailable services clearly identified.
 
 ## Commands
 
@@ -80,7 +80,7 @@ The build audits publishable source and generated client files for configured se
 
 ## Privacy and limits
 
-Images, OCR, QR decoding and metadata inspection stay on the device. With AI enabled, pressing Check sends submitted text or recognized text to the named AI provider. Link checks send detected full URLs, including query parameters, to Google. Provider and hosting policies apply. The app does not save scan history.
+OCR, QR decoding and original-file metadata inspection run on the device. With AI backup enabled, unmatched messages or recognized text are sent to the named AI provider. **AI image check** sends a resized image for visual review only if local metadata provides no AI creation marker. **Read message text** uses local OCR first and may send a resized image if OCR fails. Link checks send detected full URLs, including query parameters, to Google. Provider and hosting policies apply. The app does not save scan history.
 
 This is a screening tool. AI, rules and OCR can make mistakes; no result guarantees safety. Metadata is unverified, and screenshots can remove provenance. Current evidence does not establish 90% full-app accuracy; research scope is documented in [`docs/VALIDATION.md`](docs/VALIDATION.md).
 

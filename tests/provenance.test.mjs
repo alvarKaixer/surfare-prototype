@@ -85,6 +85,21 @@ test('C2PA containers are presence markers, not proof of AI or valid signatures'
     assert(r.limitations[0].includes('not verified'));
   }
 });
+test('AI declarations inside Content Credentials containers are surfaced without claiming verification', () => {
+  const declaration =
+    'c2pa.actions digitalSourceType\u0000http://cv.iptc.org/newscodes/digitalsourcetype/trainedAlgorithmicMedia';
+  for (const [data, type] of [
+    [png(pngChunk('caBX', encode(declaration))), 'image/png'],
+    [webp(webpChunk('C2PA', encode(declaration))), 'image/webp'],
+    [jpeg(jpegSegment(0xeb, encode('JP\0\x01jumb\0jumdc2pa' + declaration))), 'image/jpeg'],
+  ]) {
+    const result = inspectImageProvenance(data, type);
+    assert(result.credentials);
+    assert(result.findings.some((f) => f.code === 'ai-declaration'));
+    assert.match(result.findings[0].message, /unverified/);
+  }
+});
+
 test('JPEG and WebP XMP fields are checked before conversion to a canvas', () => {
   for (const [data, type] of [
     [jpeg(jpegSegment(0xe1, encode('http://ns.adobe.com/xap/1.0/\0' + xmp))), 'image/jpeg'],

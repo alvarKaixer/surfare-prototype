@@ -307,7 +307,7 @@ test('timeout is reported separately without discarding local extortion evidence
   const body = await response.json();
   assert.equal(response.status, 504);
   assert.equal(body.status, 'unavailable');
-  assert.match(body.message, /40 seconds/);
+  assert.match(body.message, /25 seconds/);
   assert.equal(calls, 1);
   assert.equal(applySemanticAssessment(assessContent({ text: message }), body).level, 'High risk');
 });

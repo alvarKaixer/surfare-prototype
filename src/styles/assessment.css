@@ -1069,6 +1069,110 @@
   font-size: 10px;
 }
 
+.image-purpose {
+  display: flex;
+  gap: 6px;
+  padding: 5px;
+  margin: 0 0 15px;
+  background: #e9edf2;
+  border-radius: 14px;
+}
+.image-purpose button {
+  flex: 1;
+  border: 0;
+  padding: 11px 8px;
+  border-radius: 10px;
+  color: #52667d;
+  background: transparent;
+  font: inherit;
+  font-size: 10px;
+  cursor: pointer;
+  transition:
+    background 0.2s,
+    box-shadow 0.2s;
+}
+.image-purpose button[aria-pressed='true'] {
+  background: #fffdf8;
+  color: #133360;
+  box-shadow: 0 2px 8px #102a4b12;
+}
+.image-purpose button:focus-visible {
+  outline: 2px solid #3075a8;
+  outline-offset: 2px;
+}
+.image-review {
+  padding: 25px 27px 28px;
+}
+.image-review-kicker {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 9px;
+  letter-spacing: 1.5px;
+  color: #a4c9ed;
+}
+.image-review-kicker > span {
+  margin-left: auto;
+  letter-spacing: 0;
+}
+.image-review h3 {
+  font-family: var(--display);
+  font-size: clamp(27px, 4vw, 36px);
+  line-height: 1.15;
+  margin: 22px 0 15px;
+  color: #f8f1e6;
+}
+.image-confidence {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 9px;
+  margin-bottom: 21px;
+}
+.image-confidence > span {
+  display: inline-flex;
+  gap: 5px;
+  align-items: center;
+  border: 1px solid #91bde94d;
+  border-radius: 99px;
+  padding: 7px 10px;
+  font-size: 10px;
+  color: #c0daf4;
+}
+.image-review.flagged .image-confidence > span {
+  color: #f3d391;
+  border-color: #d8b77566;
+}
+.image-confidence small {
+  color: #92b3d6;
+  font-size: 9px;
+}
+.image-review > p {
+  color: #d4e0ee;
+  font-size: 12px;
+  line-height: 1.8;
+  margin-bottom: 23px;
+}
+.image-review .result-disclosure {
+  color: #afc8e4;
+  font-size: 11px;
+  line-height: 1.8;
+}
+.image-review .clear {
+  margin-top: 18px;
+}
+.evidence-reader > summary {
+  cursor: pointer;
+  list-style: none;
+}
+.evidence-reader > summary::before {
+  content: '+';
+  margin-right: 8px;
+}
+.evidence-reader[open] > summary::before {
+  content: '−';
+}
+
 /* Small, soft movements; blur stays on the artwork and the brief reveal. */
 .automatic-checks {
   display: flex;
