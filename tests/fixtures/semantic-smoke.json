@@ -1,0 +1,74 @@
+[
+  {
+    "name": "Implied disappearance",
+    "language": "English",
+    "text": "I will make sure your family never sees you again.",
+    "expected": "High risk"
+  },
+  {
+    "name": "Private-image coercion",
+    "language": "English",
+    "text": "Send me money by tonight or I will publish your private photos to everyone you know.",
+    "expected": "High risk"
+  },
+  {
+    "name": "Protective advice",
+    "language": "English",
+    "text": "Do not send anyone your password or OTP. Use your bank's official app instead.",
+    "expected": "Low risk"
+  },
+  {
+    "name": "Benign idiom",
+    "language": "English",
+    "text": "This workout is killing me. Let's get some water and rest.",
+    "expected": "Low risk"
+  },
+  {
+    "name": "Reported sibling threat",
+    "language": "Filipino",
+    "text": "tanginamo pare yang kapatid mo na yan di pako binabayaran, pag ako nainis tanggal ang ulo nya",
+    "expected": "High risk"
+  },
+  {
+    "name": "Threat to release images",
+    "language": "Filipino",
+    "text": "Magpadala ka ng pera ngayong gabi o ikakalat ko ang pribado mong mga larawan.",
+    "expected": "High risk"
+  },
+  {
+    "name": "Polite debt reminder",
+    "language": "Filipino",
+    "text": "Pare, pakibayaran naman yung hiniram mong pera kapag may sahod ka na. Salamat.",
+    "expected": "Low risk"
+  },
+  {
+    "name": "Profanity without a threat",
+    "language": "Filipino",
+    "text": "Tangina, ang traffic ngayon. Late na ako sa klase.",
+    "expected": "Low risk"
+  },
+  {
+    "name": "Mixed-language family threat",
+    "language": "Taglish",
+    "text": "Send mo yung pera by tonight or your family won't see you alive again.",
+    "expected": "High risk"
+  },
+  {
+    "name": "Mixed-language sibling threat",
+    "language": "Taglish",
+    "text": "Pag hindi ka sumunod, I will hurt your sister.",
+    "expected": "High risk"
+  },
+  {
+    "name": "Mixed-language exam idiom",
+    "language": "Taglish",
+    "text": "Grabe this exam is killing me. Tara kape after class.",
+    "expected": "Low risk"
+  },
+  {
+    "name": "Ordinary shared expense",
+    "language": "Taglish",
+    "text": "Send mo yung share mo sa dinner kapag kaya na, no rush.",
+    "expected": "Low risk"
+  }
+]

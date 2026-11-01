@@ -1,0 +1,19 @@
+Offline SMS model training data
+
+1. Almeida, T. & Hidalgo, J. (2011). SMS Spam Collection [Dataset].
+UCI Machine Learning Repository. https://doi.org/10.24432/C5CC84
+Source: https://archive.ics.uci.edu/dataset/228/sms+spam+collection
+License: Creative Commons Attribution 4.0 International (CC BY 4.0).
+https://creativecommons.org/licenses/by/4.0/
+
+2. Alexander / Yissuh (2023). Filipino-Spam-SMS-Detection-Model.
+Source: https://github.com/Yissuh/Filipino-Spam-SMS-Detection-Model
+Data file: data-set.csv. License: BSD-3-Clause.
+See filipino-sms-BSD-3-Clause.txt for the complete preserved license.
+
+Surfare changes: Unicode normalization, URL/number masking for template
+grouping, deduplication, deterministic train/validation/test partitions,
+feature extraction and training of a new compact naive Bayes model.
+Raw message corpora are not distributed with the browser application.
+The model was created for this project; the dataset authors do not endorse it.
+See docs/DETECTION.md and docs/detection-benchmark.json in the source project.

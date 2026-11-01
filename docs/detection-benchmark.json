@@ -1,0 +1,105 @@
+{
+  "split": "test",
+  "modelSha256": "e85f2f59467c8f70902813b7857b7c51c8eb8f234eea6b441389e49f80aba98e",
+  "scope": "Public spam/ham corpora; not a validated scam, violence, OCR, URL-reputation or QR benchmark. Philippine corpus is multilingual but has no per-message language labels.",
+  "provenance": {
+    "rawCount": 6199,
+    "uniqueTemplates": 5650,
+    "conflictingRowsRemoved": 0,
+    "sources": [
+      {
+        "file": "uci.zip",
+        "sha256": "1587ea43e58e82b14ff1f5425c88e17f8496bfcdb67a583dbff9eefaf9963ce3"
+      },
+      {
+        "file": "filipino.csv",
+        "sha256": "39e63515afe210248f8d9c2c19dc560fe3ce140996c9de1ee49973f1a48cc1fa"
+      }
+    ],
+    "split": "SHA-256 of normalized template; 70/15/15 train/validation/test; URLs and digits masked before grouping"
+  },
+  "model": {
+    "count": 860,
+    "tp": 112,
+    "tn": 726,
+    "fp": 2,
+    "fn": 20,
+    "abstain": 0,
+    "accuracy": 0.9744186046511628,
+    "precision": 0.9824561403508771,
+    "recall": 0.8484848484848485,
+    "falsePositiveRate": 0.0027472527472527475,
+    "balancedAccuracy": 0.9228687978687979
+  },
+  "displayedAssessment": {
+    "count": 860,
+    "tp": 112,
+    "tn": 698,
+    "fp": 9,
+    "fn": 20,
+    "abstain": 29,
+    "accuracy": 0.9418604651162791,
+    "precision": 0.9256198347107438,
+    "recall": 0.8484848484848485,
+    "falsePositiveRate": 0.012362637362637362,
+    "balancedAccuracy": 0.9036380286380287
+  },
+  "bySource": {
+    "UCI SMS Spam Collection": {
+      "model": {
+        "count": 783,
+        "tp": 77,
+        "tn": 691,
+        "fp": 0,
+        "fn": 15,
+        "abstain": 0,
+        "accuracy": 0.9808429118773946,
+        "precision": 1,
+        "recall": 0.8369565217391305,
+        "falsePositiveRate": 0,
+        "balancedAccuracy": 0.9184782608695652
+      },
+      "displayedAssessment": {
+        "count": 783,
+        "tp": 77,
+        "tn": 675,
+        "fp": 4,
+        "fn": 15,
+        "abstain": 16,
+        "accuracy": 0.9604086845466155,
+        "precision": 0.9506172839506173,
+        "recall": 0.8369565217391305,
+        "falsePositiveRate": 0.005788712011577424,
+        "balancedAccuracy": 0.9069008368464104
+      }
+    },
+    "Filipino SMS corpus": {
+      "model": {
+        "count": 77,
+        "tp": 35,
+        "tn": 35,
+        "fp": 2,
+        "fn": 5,
+        "abstain": 0,
+        "accuracy": 0.9090909090909091,
+        "precision": 0.9459459459459459,
+        "recall": 0.875,
+        "falsePositiveRate": 0.05405405405405406,
+        "balancedAccuracy": 0.910472972972973
+      },
+      "displayedAssessment": {
+        "count": 77,
+        "tp": 35,
+        "tn": 23,
+        "fp": 5,
+        "fn": 5,
+        "abstain": 13,
+        "accuracy": 0.7532467532467533,
+        "precision": 0.875,
+        "recall": 0.875,
+        "falsePositiveRate": 0.13513513513513514,
+        "balancedAccuracy": 0.7483108108108107
+      }
+    }
+  }
+}

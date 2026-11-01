@@ -1,0 +1,34 @@
+{
+  "provenance": {
+    "rawCount": 6199,
+    "uniqueTemplates": 5650,
+    "conflictingRowsRemoved": 0,
+    "sources": [
+      {
+        "file": "uci.zip",
+        "sha256": "1587ea43e58e82b14ff1f5425c88e17f8496bfcdb67a583dbff9eefaf9963ce3"
+      },
+      {
+        "file": "filipino.csv",
+        "sha256": "39e63515afe210248f8d9c2c19dc560fe3ce140996c9de1ee49973f1a48cc1fa"
+      }
+    ],
+    "split": "SHA-256 of normalized template; 70/15/15 train/validation/test; URLs and digits masked before grouping"
+  },
+  "trainingCount": 3917,
+  "validation": {
+    "threshold": 16,
+    "count": 873,
+    "tp": 117,
+    "tn": 732,
+    "fp": 6,
+    "fn": 18,
+    "accuracy": 0.9725085910652921,
+    "precision": 0.9512195121951219,
+    "recall": 0.8666666666666667,
+    "f1": 0.9069767441860465,
+    "balancedAccuracy": 0.9292682926829268
+  },
+  "modelVocabulary": 10321,
+  "testPolicy": "Frozen test split must be evaluated after integration. Spam/ham labels are not violence or verified-fraud labels."
+}

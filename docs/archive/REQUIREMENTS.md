@@ -1,6 +1,8 @@
-# PDF scope and implementation
+# Archived proposal scope and implementation
 
-Source: g(OAT)ed.pdf supplied in this conversation. The request excludes Surfy's guided assistant; the mascot remains decorative branding. No assistant/Q&A is implemented.
+> Historical proposal mapping. It does not describe the current deployment layout or service configuration. See [current architecture](../ARCHITECTURE.md) and [deployment instructions](../DEPLOYMENT.md).
+
+The original mapping below refers to an earlier g(OAT)ed.pdf. The current request references g(OAT)ed (1).pdf and prioritizes actual message, link, image and QR detection, evidence highlighting, explanations, summary, recommendations and the risk bar. Surfy Q&A remains excluded. The updated implementation and benchmark are documented in [docs/DETECTION.md](docs/DETECTION.md). Language switching and Web3Forms from the newer PDF are not included in this detection-focused change.
 
 | PDF item | Working implementation | Boundary |
 |---|---|---|
@@ -20,6 +22,7 @@ Source: g(OAT)ed.pdf supplied in this conversation. The request excludes Surfy's
 
 ## Demonstrated checks
 
-- 44 automated tests cover rules, unavailable-provider behavior, result fusion, file signatures and size bounds, evaluation metric math, import validation, OCR edit-distance calculation and context-specific guidance, plus both hosting adapters.
-- Previously verified real deployed Google lookup: neutral example.com (no match), Google test phishing (SOCIAL_ENGINEERING), Google test malware (MALWARE). These exercise connectivity and result mapping, not real-world accuracy.
+- The automated suite covers threats and benign counterexamples, evidence offsets, shared content handling, rules, unavailable-provider behavior, result fusion, file signatures and size bounds, evaluation metrics, OCR handling and hosting adapters. Real-engine OCR integration includes a Tagalog threat screenshot.
+- The current local Google endpoint reports `configured: false`. Mocked-provider tests cover threat/no-match/failure behavior; real online verification requires a server API key.
 - Browser checks include preview-before-scan, editable OCR, QR decoding, separate Google states and evaluation controls.
+- Frozen SMS benchmark: 94.19% overall accuracy, 90.36% balanced accuracy, 84.85% spam recall on 860 held-out cases. The Philippine subset scores 75.32% final-verdict accuracy including uncertainty as misses. This does not validate 90% across all languages or content types.

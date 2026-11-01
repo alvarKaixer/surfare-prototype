@@ -1,5 +1,10 @@
 name: Check and build
 on: [push, pull_request]
+permissions:
+  contents: read
+concurrency:
+  group: checks-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   check:
     runs-on: ubuntu-latest
@@ -10,5 +15,5 @@ jobs:
           node-version: '22'
           cache: npm
       - run: npm ci
-      - run: npm test
-      - run: npm run build
+      - name: Formatting, regressions, typecheck and guarded build
+        run: npm run check

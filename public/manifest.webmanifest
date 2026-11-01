@@ -1,1 +1,9 @@
-{"name": "Surfare Detector", "short_name": "Surfare", "start_url": "/", "display": "standalone", "background_color": "#06122e", "theme_color": "#0b2e73", "icons": [{"src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any"}]}
+{
+  "name": "Surfare Detector",
+  "short_name": "Surfare",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#06122e",
+  "theme_color": "#0b2e73",
+  "icons": [{ "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+}

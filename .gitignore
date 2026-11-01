@@ -1,15 +1,36 @@
+# Dependencies and builds
 node_modules/
 dist/
+coverage/
+*.tsbuildinfo
+
+# Local credentials (only sanitised examples belong in Git)
+.env*
+!.env.example
+.dev.vars*
+!.dev.vars.example
+*.pem
+*.key
+*.p12
+*.pfx
+credentials*.json
+
+# Hosting state and development/research artifacts
 .wrangler/
 .vercel/
-.env
-.env.*
-!.env.example
-.dev.vars
-.dev.vars.*
-!.dev.vars.example
+.preview/
+.reports/
+logs/
+*.log
+__pycache__/
+*.py[cod]
+
+# OCR is copied from locked npm packages during the build
 public/ocr/
 *.traineddata
-*.tsbuildinfo
+
+# Editor/OS files
+.idea/
+.vscode/
 .DS_Store
 Thumbs.db

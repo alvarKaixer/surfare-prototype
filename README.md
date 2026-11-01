@@ -1,147 +1,87 @@
-# Surfare Detector
+# Surfare
 
-A standalone, GitHub-ready React + Vite application for checking text messages, links, images and QR codes. Includes the proposal-style UI, local OCR/QR processing, lightweight camera-quality hints, optional Google Safe Browsing, offline resources, contextual guidance and evaluation tools.
+Surfare checks messages, links, image text and QR codes for threats and suspicious requests. It combines contextual AI, local detection and Google Safe Browsing, then presents a risk category, highlighted evidence and practical next steps.
 
-This export contains the working detector from the ChatGPT prototype, adapted for ordinary hosting. It does not require ChatGPT sign-in, Sites, a proprietary repository proxy, or an account-specific project ID. Surfy is decorative branding only; the guided assistant is excluded.
+Built with React, TypeScript and Vite. Server adapters support Vercel and Cloudflare Workers.
 
-## Start here: GitHub + Vercel
+## Features
 
-1. Extract the ZIP. Open the **surfare** folder in VS Code. This is the folder containing `package.json`, `vercel.json`, `app`, `api`, and `public`.
-2. Create a new GitHub repository (for example `surfare-detector`). Prefer a separate repo from the existing proposal website so you can keep both sites. Commit the entire **contents** of this folder, including `.gitignore`, `.github` and `package-lock.json`.
-3. In Vercel, choose **Add New → Project → Import Git Repository** and select the new repository.
-4. Set **Root Directory** to the folder containing `package.json`. If you pushed the contents directly into the repo root, leave it at the default. If you pushed an enclosing `surfare` folder, select `surfare`.
-5. Framework: **Vite**. Node.js: **22.x**. Build command: `npm run build`. Output directory: `dist/client`. Install command: `npm ci`. The included `vercel.json` sets the build/output options and deploys `api/verify.js` as a serverless function.
-6. Add a server-side environment variable named **GOOGLE_SAFE_BROWSING_API_KEY**. Paste your Google key as the value, enable it for Production (and Preview if needed), then deploy. If you add or change it later, redeploy.
-7. Open the deployed app. Under **Link**, select **Google phishing test**, enable the Google checkbox, and run the check. Expect **High risk**, with `SOCIAL_ENGINEERING` in the Google verification panel.
+- AI context for English, Filipino and Taglish, with free-only OpenRouter routing and an optional Gemini provider.
+- Link reputation through Google Safe Browsing, without opening submitted destinations.
+- Local OCR and QR decoding, including image preview, crop, rotation and editable extracted text.
+- Original-file metadata inspection with explicit limits: missing provenance never proves authenticity.
+- Offline local checks and prepared OCR resources; responsive UI with reduced-motion support.
 
-The key configured for the ChatGPT-hosted copy does **not** transfer to your Vercel account. No real key is included in this ZIP. Do not put a key in source, `vercel.json`, a `VITE_` variable, or GitHub. Restrict it to Safe Browsing API in Google Cloud.
-
-### Optional terminal steps for a new GitHub repository
-
-Replace the repository URL with the exact URL of the empty repository you created. Run from the folder containing `package.json`:
-
-```bash
-git init
-git add .
-git commit -m "Add Surfare detector"
-git branch -M main
-git remote add origin https://github.com/YOUR_USERNAME/YOUR_REPOSITORY.git
-git push -u origin main
-```
-
-If this folder is already in a Git repository, keep its existing Git configuration and use your normal commit/push flow instead.
+The research/validation screens are hidden from the shipped app. Research code and methodology remain available under [`research/`](research/README.md) and [`docs/VALIDATION.md`](docs/VALIDATION.md).
 
 ## Run locally
 
-Install **Node.js 22 LTS**. Then:
+Requires **Node.js 22.13 or newer** and npm. The repository pins Node 22 in `.nvmrc`.
 
 ```bash
 npm ci
 ```
 
-Copy `.dev.vars.example` to `.dev.vars` and replace the placeholder with your key. This untracked file is used only by local Cloudflare/Wrangler development. The app also runs without a key, with local detection and an explicit unavailable Google status.
+For a fresh checkout, create `.dev.vars` from [`.dev.vars.example`](.dev.vars.example). Keep an existing `.dev.vars` intact. Add your server keys to the local file, then run:
 
 ```bash
 npm run dev
 ```
 
-This builds the app and starts it with its local Worker at **http://localhost:8787**. After editing source, stop it and rerun `npm run dev` to rebuild. For UI hot reload, keep the Worker running and run `npm run dev:ui` in a second terminal; Vite proxies `/api` to port 8787.
+Open **http://localhost:8787**. This command builds the client and starts its local Worker API. For UI hot reload, keep it running and start `npm run dev:ui` in another terminal. Restart the Worker after changing keys.
 
-```bash
-npm test
-npm run typecheck
-npm run build
-npm run preview
+Configured AI and reputation services are enabled by default. Content is sent only after **Check** is pressed. **Options & privacy** can disable either service. The app also runs without provider keys, with unavailable services clearly identified.
+
+## Commands
+
+| Command                 | Purpose                                                                    |
+| ----------------------- | -------------------------------------------------------------------------- |
+| `npm run dev`           | Build and run the complete app locally                                     |
+| `npm run dev:ui`        | Vite hot reload; proxies `/api` to the local Worker                        |
+| `npm test`              | Run code regression tests with mocked external services                    |
+| `npm run check`         | Formatting, regression tests and a guarded production build                |
+| `npm run build`         | Check secrets, typecheck, build client/OCR/offline assets and audit output |
+| `npm run preview`       | Serve an existing build with the local Worker                              |
+| `npm run format`        | Format maintained source and configuration                                 |
+| `npm run check:secrets` | Audit files Git would publish, without printing secrets                    |
+
+Research and training commands are documented separately in [`research/README.md`](research/README.md). They are not part of a normal deployment build.
+
+## Deploy
+
+Push the source repository to GitHub and connect it to **Vercel** or **Cloudflare Workers**. GitHub Pages alone cannot run the required server endpoints.
+
+For Vercel, use the repository root, Node 22, `npm ci`, build command `npm run build` and output `dist/client`. The checked-in `vercel.json` configures the API functions and routing. Set server-side keys in the hosting dashboard; local `.dev.vars` values do not transfer to deployment.
+
+See [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) for both hosting paths, environment variables and verification steps.
+
+## Repository layout
+
+```text
+src/          React app, components and styles
+lib/          Detection, evidence, image-processing and shared assessment logic
+server/       Private provider services and the Node HTTP adapter
+api/          Thin Vercel function entry points
+worker/       Cloudflare Worker entry point
+public/       Shipped branding, fonts, examples and license notices
+scripts/      Build, formatting and repository safeguards
+tests/        Regression tests and authored fixtures
+research/     Training, evaluation scripts and inactive validation UI
+docs/         Architecture, deployment, methodology and archived research notes
 ```
 
-`npm run preview` serves the previously built app and local Worker on port 8787. `vite preview` alone is not a complete API preview.
+See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for component boundaries and request flow.
 
-## Getting clearer and faster OCR
+## Secrets and generated files
 
-- For text on a monitor or phone, upload an original screenshot. A camera photo can introduce reflections, blur, perspective distortion and moiré patterns.
-- For photographs, fill the frame with the message, keep the camera parallel to it, and allow focus to settle. The app requests a high-resolution rear camera with continuous focus when supported, and prefers a still photo over a video frame where the browser supports it.
-- Use **Crop to text** to exclude desktop windows, borders and unrelated text. Rotate sideways photos before scanning; restore the original to retry a crop. The preview is reduced for display; OCR uses the larger image canvas.
-- OCR starts preparing when the Image tab opens and reuses one worker. The first scan needs the engine and a roughly 3 MB English model. Quality checks use local pixels immediately and do not download OpenCV.
-- The first recognition pass preserves the original image and uses automatic layout and slight-skew correction. Weak readings can get one enhanced, sparse-layout retry. Disable the retry checkbox if you prefer a single pass. It cannot recover letters lost to blur or glare.
-- Review the extracted text, especially URLs, numbers and OTP requests. Confidence is approximate, not a guarantee that every character is correct.
+Real `.env*` and `.dev.vars*` files, hosting state, dependencies, build output and development reports are ignored by Git. Only sanitised `.example` templates belong in source control. API keys must never use a `VITE_` prefix: those variables are public browser configuration.
 
-The LSTM-only `4.0.0_best_int` model omits the unused legacy data in the previous 11 MB language file. The asset-copy script includes both SIMD and non-SIMD cores, with a build-time check that all four engine files exist. No OCR data is sent to a server.
+The build audits publishable source and generated client files for configured secrets and credential-shaped values. CI runs without production API keys. These checks are additional safeguards; review changes before committing.
 
-Optional real-engine smoke check after building:
+## Privacy and limits
 
-```bash
-node --test tests/ocr.integration.mjs
-```
+Images, OCR, QR decoding and metadata inspection stay on the device. With AI enabled, pressing Check sends submitted text or recognized text to the named AI provider. Link checks send detected full URLs, including query parameters, to Google. Provider and hosting policies apply. The app does not save scan history.
 
-This uses the bundled English model on two synthetic screenshot fixtures (light and dark). It does not measure accuracy on camera photos or mobile speed. Use the Evaluation tab and independent photos to measure those.
+This is a screening tool. AI, rules and OCR can make mistakes; no result guarantees safety. Metadata is unverified, and screenshots can remove provenance. Current evidence does not establish 90% full-app accuracy; research scope is documented in [`docs/VALIDATION.md`](docs/VALIDATION.md).
 
-## Alternative: Cloudflare Workers
-
-Cloudflare keeps the PDF's Worker backend architecture. No Vercel function is used on this route.
-
-```bash
-npm ci
-npx wrangler login
-npm run deploy:cloudflare
-npx wrangler secret put GOOGLE_SAFE_BROWSING_API_KEY
-```
-
-Enter the key at Wrangler's prompt. Keep it out of shell command arguments and tracked files. Open the Workers URL printed by Wrangler, then run the Google phishing test in the app.
-
-You can also connect the GitHub repository through **Cloudflare Workers & Pages → Create → Import a repository**. Choose a Worker (not a static Pages-only project), use build command `npm run build`, deploy command `npx wrangler deploy`, and root directory containing `wrangler.jsonc`. Add the key as a Worker secret. The assets binding and `/api/*` routing are declared in `wrangler.jsonc`.
-
-## Files and architecture
-
-| Path | Purpose |
-|---|---|
-| `app/page.tsx` | Checker UI, file preview, OCR/QR and camera flow |
-| `app/components/` | Evaluation tools and offline readiness display |
-| `lib/detection.js` | Local message/URL rules and registered-domain analysis |
-| `lib/verification.js` | Google Safe Browsing request logic shared by both hosts |
-| `lib/assessment.js` | Combines local evidence with reputation results |
-| `lib/file-validation.js` | Image signatures and file-size validation |
-| `lib/image-tools.ts`, `lib/image-pixels.js` | Bounded image sizing, grayscale enhancement and lightweight camera-quality hints |
-| `lib/ocr.js` | Automatic layout recognition and conditional fallback selection |
-| `lib/evaluation.js` | Dataset metrics and OCR character error rate |
-| `api/verify.js` | Vercel serverless backend |
-| `worker/index.js` | Cloudflare backend and static assets handler |
-| `public/brand`, `public/fonts` | Original Surfare artwork and locally hosted fonts |
-| `public/evaluation/` | Synthetic example cases and import format |
-| `scripts/copy-ocr.mjs` | Copies OCR worker, SIMD/non-SIMD WASM cores and the LSTM language model from npm |
-| `scripts/offline.mjs` | Builds the Workbox offline service worker |
-| `tests/` | Regression and hosting adapter tests |
-| `.github/workflows/checks.yml` | Tests/builds pushes and pull requests |
-| `REQUIREMENTS.md` | PDF requirements mapping and boundaries |
-
-OCR assets are generated from locked npm dependencies during every build. You do not need to upload generated OCR files to GitHub. Fonts, mascots, QR examples, evaluation data, source, configuration, dependency lockfile and tests are included. Never upload `node_modules`, `dist`, `.dev.vars`, `.env`, `.vercel`, or `.wrangler`.
-
-## Verify your deployment
-
-- `/api/verify` should return JSON such as `{"configured":true}`. `false` means the server secret is missing. HTML here usually means the backend route was not deployed correctly.
-- Run **Google phishing test** with the checkbox enabled. It should report a Google threat; the app does not need to visit the test URL.
-- Upload a PNG/JPEG/WebP screenshot, review the preview, and press **Check image**. Correct OCR text if needed.
-- Try the built-in QR example. Its destination is displayed without being opened.
-- Select **Prepare for offline use**, wait for completion, then check offline on your target browser. The complete package is approximately 17 MB. OCR assets can also be downloaded earlier when you open the Image tab. Browser eviction/private browsing may affect offline reopening.
-- Run **Evaluation** with independently labeled cases for research. Included synthetic cases are demonstrations, not evidence of real-world accuracy.
-
-## Troubleshooting
-
-**Vercel 404:** Check Root Directory and Output Directory (`dist/client`). Do not deploy the `app` folder by itself.
-
-**Google not configured:** Add `GOOGLE_SAFE_BROWSING_API_KEY` on the correct host/environment and redeploy. It is intentionally absent from the source.
-
-**Google unavailable:** Verify that Safe Browsing API is enabled, the key restrictions permit that API, and your quota is available. Server-side calls must not use browser HTTP-referrer restrictions.
-
-**Old interface after deployment:** Hard-refresh. If you enabled offline mode, close old tabs and reopen online to let the service worker update. Clear that site's storage if necessary.
-
-**OCR fails offline:** Prepare offline resources while online and wait for completion. Do not remove `public/ocr` from the built output; it is automatically generated before build.
-
-## Scope and privacy
-
-Messages and images are processed in the browser. Only opted-in full URLs, including query parameters, are sent through the server to Google. No scan history is stored by the app. Evaluation inputs stay in the current tab until explicitly exported. Hosting and provider infrastructure have their own policies.
-
-Safe Browsing is for noncommercial use under Google's terms and quotas. This exported app has no ChatGPT owner-only access gate; configure your host's access controls if you want a private demo. Review your API quotas before sharing widely.
-
-This is a heuristic prototype, not a validated security product. A no-match response does not prove safety. Live redirect chains are not followed; redirect parameters are inspected. Images are not authenticated and AI-generated media is not detected. One visible QR per image is supported. OCR uses an English Latin-character model. Actual accuracy requires independent labeled data and participant evaluation.
-
-Deployment adapters are tested locally; publishing into your own Vercel/Cloudflare account must be completed there.
+Preserved third-party notices are listed in [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md). Application code and supplied artwork do not currently carry an open-source license.

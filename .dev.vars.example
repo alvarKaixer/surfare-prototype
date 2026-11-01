@@ -1,2 +1,10 @@
 # Copy to .dev.vars for local Cloudflare development. Never commit the real file.
-GOOGLE_SAFE_BROWSING_API_KEY=replace_with_your_google_key
+GOOGLE_SAFE_BROWSING_API_KEY=
+# Optional contextual AI. Auto selects OpenRouter when its key is present, otherwise Gemini.
+AI_PROVIDER=auto
+OPENROUTER_API_KEY=
+# Free router or an explicit model ending in :free. Paid model IDs are rejected.
+OPENROUTER_MODEL=openrouter/free
+# Optional Gemini alternative. No cross-provider fallback is performed.
+GEMINI_API_KEY=
+GEMINI_MODEL=gemini-3.1-flash-lite
