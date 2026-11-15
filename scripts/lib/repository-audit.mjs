@@ -17,7 +17,7 @@ const excludedDirectories = new Set([
   'logs',
 ]);
 const textExtensions =
-  /\.(?:[cm]?[jt]sx?|jsonc?|html|css|md|txt|ya?ml|toml|ini|conf|xml|svg|webmanifest|example|py|sh|ps1|map)$/i;
+  /\.(?:[cm]?[jt]sx?|jsonc?|html|css|md|txt|ya?ml|toml|ini|conf|xml|svg|webmanifest|example|py|sh|ps1|map|sql)$/i;
 const exampleNames = new Set(['.env.example', '.dev.vars.example']);
 
 export function isPrivateFile(file) {
@@ -84,7 +84,7 @@ export async function configuredSecrets() {
   const values = new Set();
   for (const [name, value] of Object.entries(process.env)) {
     if (
-      /(?:API_KEY|TOKEN|SECRET|PASSWORD|CREDENTIAL)/i.test(name) &&
+      /(?:API_KEY|SERVICE_ROLE_KEY|TOKEN|SECRET|PASSWORD|CREDENTIAL)/i.test(name) &&
       typeof value === 'string' &&
       value.length >= 16
     )
@@ -96,7 +96,10 @@ export async function configuredSecrets() {
     if (!(await lstat(name)).isFile()) continue;
     for (const line of (await readFile(name, 'utf8')).split(/\r?\n/)) {
       const match = line.match(/^\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*?)\s*$/);
-      if (match && /(?:API_KEY|TOKEN|SECRET|PASSWORD|CREDENTIAL)/i.test(match[1])) {
+      if (
+        match &&
+        /(?:API_KEY|SERVICE_ROLE_KEY|TOKEN|SECRET|PASSWORD|CREDENTIAL)/i.test(match[1])
+      ) {
         const value = match[2].replace(/^(['"])(.*)\1$/, '$2');
         if (value.length >= 16 && !/^(?:replace|your[_ -]|test|unit-test|placeholder)/i.test(value))
           values.add(value);

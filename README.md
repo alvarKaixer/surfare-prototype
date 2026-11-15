@@ -6,11 +6,12 @@ Built with React, TypeScript and Vite. Server adapters support Vercel and Cloudf
 
 ## Features
 
-- Local warning patterns and an offline SMS model, with AI backup for unmatched English, Filipino and Taglish messages. Free-only OpenRouter routing and optional Gemini support.
+- Local warning patterns and an offline SMS model, with AI review for unclear or suspicious English, Filipino and Taglish messages. Free-only OpenRouter routing and optional Gemini support.
 - Link reputation through Google Safe Browsing, without opening submitted destinations.
 - Local OCR and QR decoding, including image preview, crop, rotation and editable extracted text.
 - Metadata-first AI image checks, with optional visual review when no explicit marker is found. Missing provenance never proves authenticity; evidence confidence is not a calibrated probability.
 - Offline local checks and prepared OCR resources; responsive UI with reduced-motion support.
+- Optional reviewed feedback: fixed warning tags, separately consented excerpts, encrypted offline queuing and withdrawal controls. Supabase storage requires setup; see [feedback setup](docs/FEEDBACK.md).
 
 The research/validation screens are hidden from the shipped app. Research code and methodology remain available under [`research/`](research/README.md) and [`docs/VALIDATION.md`](docs/VALIDATION.md).
 
@@ -22,7 +23,7 @@ Requires **Node.js 22.13 or newer** and npm. The repository pins Node 22 in `.nv
 npm ci
 ```
 
-For a fresh checkout, create `.dev.vars` from [`.dev.vars.example`](.dev.vars.example). Keep an existing `.dev.vars` intact. Add your server keys to the local file, then run:
+For a fresh checkout, create `.dev.vars` using the variable names in [`.env.example`](.env.example). Keep an existing `.dev.vars` intact. Add your server keys to the local file, then run:
 
 ```bash
 npm run dev
@@ -30,7 +31,7 @@ npm run dev
 
 Open **http://localhost:8787**. This command builds the client and starts its local Worker API. For UI hot reload, keep it running and start `npm run dev:ui` in another terminal. Restart the Worker after changing keys.
 
-Configured AI backup and reputation services are enabled by default. Content is sent only after **Check** is pressed. A local warning skips AI; unmatched messages use AI backup. **Options & privacy** can disable either service. The app also runs without provider keys, with unavailable services clearly identified.
+Configured AI backup and reputation services are enabled by default. Content is sent only after **Check** is pressed. Strong high-risk local findings skip AI; unclear and suspicious results can use AI review. **Options & privacy** can disable either service. The app also runs without provider keys, with unavailable services clearly identified.
 
 ## Commands
 
@@ -80,7 +81,9 @@ The build audits publishable source and generated client files for configured se
 
 ## Privacy and limits
 
-OCR, QR decoding and original-file metadata inspection run on the device. With AI backup enabled, unmatched messages or recognized text are sent to the named AI provider. **AI image check** sends a resized image for visual review only if local metadata provides no AI creation marker. **Read message text** uses local OCR first and may send a resized image if OCR fails. Link checks send detected full URLs, including query parameters, to Google. Provider and hosting policies apply. The app does not save scan history.
+OCR, QR decoding and original-file metadata inspection run on the device. With AI backup enabled, unclear or suspicious messages or recognized text are sent to the named AI provider. **AI image check** sends a resized image for visual review only if local metadata provides no AI creation marker. **Read message text** uses local OCR first and may send a resized image if OCR fails. Link checks send detected full URLs, including query parameters, to Google. Provider and hosting policies apply. The app does not save scans automatically. Optional feedback requires a separate preview and opt-in; excerpts require additional consent. Pending feedback is encrypted locally for up to seven days and submitted content is retained for 30 days with hourly cleanup. [Feedback documentation](docs/FEEDBACK.md) explains deletion, configuration and limits.
+
+The latest [detection changes](docs/DETECTION-UPDATE.md) are development-informed and have not been behaviorally tested or accuracy-evaluated. The SMS model has not been retrained. Dataset and browser evaluation are deferred.
 
 This is a screening tool. AI, rules and OCR can make mistakes; no result guarantees safety. Metadata is unverified, and screenshots can remove provenance. Current evidence does not establish 90% full-app accuracy; research scope is documented in [`docs/VALIDATION.md`](docs/VALIDATION.md).
 

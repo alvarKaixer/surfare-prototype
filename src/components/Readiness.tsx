@@ -24,7 +24,10 @@ export default function Readiness({
         <div className="readiness-body">
           <div>
             <strong>On this device</strong>
-            <p>Pattern checks, OCR and QR. Unfamiliar wording may be missed.</p>
+            <p>
+              Pattern checks, OCR and QR work offline after their app files and models are saved.
+              Unfamiliar wording may be missed.
+            </p>
           </div>
           <div>
             <strong>AI context</strong>

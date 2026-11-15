@@ -19,6 +19,7 @@ import { inspectImageProvenance } from '../lib/image-provenance.js';
 import ImageProvenance from './components/ImageProvenance';
 import { loadLocalAssessment } from './services/local-assessment';
 import Assessment from './components/Assessment';
+import Feedback, { FeedbackManager } from './components/Feedback';
 import CheckLoading from './components/CheckLoading';
 import {
   imageQuality,
@@ -270,7 +271,7 @@ export default function App() {
     setResult(null);
     setVerification(null);
     if (
-      local.level === 'Insufficient evidence' &&
+      ['Insufficient evidence', 'Suspicious'].includes(local.level) &&
       aiChoice.current !== false &&
       navigator.onLine &&
       !services.current.ai?.configured
@@ -280,8 +281,8 @@ export default function App() {
     let ai: any = providedAi || {
         status: 'not_checked',
         message:
-          local.level !== 'Insufficient evidence'
-            ? 'A local warning matched. AI backup was not needed.'
+          local.level === 'High risk'
+            ? 'Strong local warnings matched. AI backup was not needed.'
             : !aiAllowed
               ? 'Contextual AI was not selected. Local rules do not establish the meaning or safety of this message.'
               : !navigator.onLine
@@ -756,7 +757,7 @@ export default function App() {
             aiRecipient +
             '.'
       : aiEnabled
-        ? 'Local checks first. Unmatched text may be sent to ' + aiRecipient + '.'
+        ? 'Local checks first. Unclear or suspicious text may be sent to ' + aiRecipient + '.'
         : 'Local checks only.';
   const sharingNotice = !online
     ? 'Offline: checks stay on this device.'
@@ -1138,7 +1139,7 @@ export default function App() {
                           : 'Unavailable'}
                       </em>
                     </strong>
-                    <small>Used when local checks find no clear match.</small>
+                    <small>Reviews unclear results and suspicious local warnings.</small>
                   </span>
                 </label>
                 <label className="checkbox consent option-row">
@@ -1181,9 +1182,10 @@ export default function App() {
                 </a>
               </p>
               <p>
-                Link checks send full URLs, including query parameters. No scan history is saved by
-                this app.
+                Link checks send full URLs, including query parameters. Scans are not saved
+                automatically. Optional feedback is stored only after you review and approve it.
               </p>
+              <FeedbackManager />
             </details>
             <p id="check-sharing" className="submission-disclosure">
               {servicesLoading
@@ -1214,7 +1216,9 @@ export default function App() {
                     (tab === 0 ? 'message' : tab === 1 ? 'link' : tab === 2 ? 'image' : 'QR code')}
               {!busy && !servicesLoading && <ArrowRight size={18} />}
             </button>
-            <p className="privacy">No scan history. Never a guarantee of safety.</p>
+            <p className="privacy">
+              No automatic scan history. Feedback is optional. Never a guarantee of safety.
+            </p>
           </div>
         </section>
         <section
@@ -1268,6 +1272,12 @@ export default function App() {
                   }}
                 />
               )}
+              {!(tab === 2 && imageMode === 'origin') && (
+                <Feedback
+                  result={result}
+                  kind={tab === 3 ? 'qr' : tab === 2 ? 'image' : tab === 1 ? 'link' : 'message'}
+                />
+              )}
               {provenance && !(tab === 2 && imageMode === 'origin') && (
                 <div className="result-provenance">
                   <ImageProvenance result={provenance} />
@@ -1308,8 +1318,8 @@ export default function App() {
         <summary>How Surfare works</summary>
         <p>
           Local rules and a small SMS model check first. AI backup checks meaning and context when
-          no local warning matches. Google Safe Browsing checks URL reputation. AI and local checks
-          can make mistakes; no result guarantees safety.
+          local results are unclear or suspicious. Google Safe Browsing checks URL reputation. AI
+          and local checks can make mistakes; no result guarantees safety.
         </p>
         <p>
           AI image checks read original metadata first. Optional AI visual review looks for visible

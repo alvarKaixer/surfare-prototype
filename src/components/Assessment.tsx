@@ -122,6 +122,22 @@ export default function Assessment({
           AI and local checks disagree. The stronger warning is retained.
         </p>
       )}
+      {!!result.reviewedLocalIndicators?.length && (
+        <details className="result-disclosure">
+          <summary>Local hints reviewed by AI</summary>
+          <p>
+            The AI interpreted these weak wording hints as benign. Review them yourself if the
+            context is unexpected.
+          </p>
+          <ul>
+            {result.reviewedLocalIndicators.map((item: any) => (
+              <li key={item.id}>
+                {item.title}: {item.message}
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
       <p className="verdict-summary">{result.summary || result.recommendation}</p>
       {!!result.sourceText && (
         <details className="evidence-reader">

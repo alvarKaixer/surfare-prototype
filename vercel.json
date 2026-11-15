@@ -4,6 +4,9 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist/client",
   "functions": {
+    "api/feedback.js": {
+      "maxDuration": 20
+    },
     "api/verify.js": {
       "maxDuration": 20
     },
